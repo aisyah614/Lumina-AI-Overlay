@@ -129,36 +129,43 @@ def run():
         horizontal=True
     )
 
+    uploaded = None
+
     col1, col2 = st.columns(2)
 
     # -------- LEFT SIDE --------
     with col1:
         st.subheader("📷 Student Camera")
 
-        webrtc_streamer(
-            key="cam",
-            video_processor_factory=LuminaPerception,
-            rtc_configuration=RTC_CONFIG
-        )
-
-        uploaded = None
+        # Camera is optional: only run if you want face detection
+        if mode == "Upload Screenshot":
+            st.info("Camera not required for screenshot mode")
+        else:
+            webrtc_streamer(
+                key="cam",
+                video_processor_factory=LuminaPerception,
+                rtc_configuration=RTC_CONFIG,
+                media_stream_constraints={"video": True, "audio": False},  # only camera if needed
+            )
 
         if mode == "Live Screen Share":
             st.subheader("📺 Live Screen")
-
             st.info("Click START → Select Screen / Window / Tab")
 
+            # Screen share setup
             webrtc_streamer(
                 key="screen",
                 mode=WebRtcMode.SENDRECV,
                 video_processor_factory=ScreenProcessor,
                 rtc_configuration=RTC_CONFIG,
-                media_stream_constraints={"video": True, "audio": False},
+                media_stream_constraints={
+                    "video": True,  # modern browsers will prompt to share screen
+                    "audio": False
+                },
             )
 
         elif mode == "Upload Screenshot":
             st.subheader("📁 Upload Screen")
-
             uploaded = st.file_uploader(
                 "Upload screenshot",
                 type=["png", "jpg", "jpeg"]
