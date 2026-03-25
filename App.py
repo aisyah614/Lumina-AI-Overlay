@@ -18,16 +18,18 @@ st.set_page_config(page_title="Lumina AI: Inclusive Education", page_icon="🤖"
 @st.cache_resource
 def load_lumina_model():
     try:
-        with open('model.json', 'r') as f:
-            model_json = f.read()
-        model = tf.keras.models.model_from_json(model_json)
-        return model
+        if os.path.exists('model.json'):
+            with open('model.json', 'r') as f:
+                model_json = f.read()
+            model = tf.keras.models.model_from_json(model_json)
+            return model
+        return "LightMode"
     except Exception:
         return "LightMode"
 
 emotion_model = load_lumina_model()
 
-# --- 3. PERCEPTION MODULE (Student Face Tracking) ---
+# --- 3. PERCEPTION MODULE (Affective Logic) ---
 class LuminaPerception:
     def __init__(self):
         self.current_state = "Neutral"
@@ -50,6 +52,7 @@ class LuminaPerception:
                 preds = emotion_model.predict(roi, verbose=0)[0]
                 detected = EMOTION_LABELS[np.argmax(preds)]
             
+            # Temporal Smoothing
             self.history.append(detected)
             if len(self.history) > 10: self.history.pop(0)
             self.current_state = max(set(self.history), key=self.history.count)
@@ -60,14 +63,15 @@ class LuminaPerception:
         st.session_state['detected_state'] = self.current_state
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# --- 4. THE UI & SCREEN SHARING ---
+# --- 4. THE UI & SCAFFOLDING ---
 def run_app():
     st.title("🤖 Lumina AI: Empathetic Assistive Technology")
     
     if 'frustrated_since' not in st.session_state: st.session_state.frustrated_since = None
     if 'detected_state' not in st.session_state: st.session_state.detected_state = "Neutral"
 
-    col1, col2, col3 = st.columns([1, 1, 1])
+    # Split into two columns: Camera and Scaffolding
+    col1, col2 = st.columns([1, 1])
 
     with col1:
         st.subheader("👤 Student Feed")
@@ -80,26 +84,6 @@ def run_app():
         )
 
     with col2:
-        st.subheader("💻 Learning Material")
-        st.write("Share your **Homework/PDF** below:")
-        
-        # --- FIXED SCREEN SHARE CONFIG ---
-        webrtc_streamer(
-            key="homework-screen",
-            mode=WebRtcMode.SENDRECV,
-            rtc_configuration=RTC_CONFIG,
-            video_processor_factory=None, # DO NOT use LuminaPerception here
-            media_stream_constraints={
-                "video": {
-                    "displaySurface": "browser", # This forces the "Share Tab/Window" popup
-                    "width": 1280,
-                    "height": 720
-                },
-                "audio": False
-            },
-        )
-
-    with col3:
         st.subheader("💡 Lumina Scaffolding")
         current_emo = st.session_state['detected_state']
         
@@ -110,13 +94,13 @@ def run_app():
             
             if elapsed >= 5:
                 st.error("⚠️ Cognitive Overload Detected")
-                st.info("**Lumina AI Simplification:**\n'I see you're looking at the homework. This part is just asking for a summary. Try writing one sentence for each paragraph.'")
+                st.info("**Lumina AI Simplification:**\n'I notice this section might be challenging. Let's break it down: Focus on the main keywords first before reading the full explanation.'")
             else:
-                st.warning(f"Monitoring... {int(elapsed)}s / 5s")
+                st.warning(f"Monitoring Learning Persistence... {int(elapsed)}s / 5s")
         else:
             st.session_state.frustrated_since = None
             st.success(f"State: {current_emo}")
-            st.write("Displaying standard material.")
+            st.write("Standard difficulty material is currently being processed.")
 
 # --- 5. FOOTER ---
 st.markdown("---")
