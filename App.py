@@ -11,7 +11,7 @@ from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
 EMOTION_LABELS = {0: 'Frustrated', 1: 'Happy', 2: 'Neutral'}
 RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
 
-st.set_page_config(page_title="Lumina AI: ScreenStream Mode", layout="wide", page_icon="🤖")
+st.set_page_config(page_title="Lumina AI: Remote Assist", layout="wide", page_icon="🤖")
 
 # --- 2. MODEL LOADING ---
 @st.cache_resource
@@ -26,7 +26,7 @@ def load_lumina_model():
 
 model = load_lumina_model()
 
-# --- 3. PERCEPTION MODULE (Face Tracking) ---
+# --- 3. PERCEPTION MODULE (Affective Intelligence) ---
 class LuminaPerception:
     def __init__(self):
         self.history = []
@@ -52,51 +52,61 @@ class LuminaPerception:
             
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# --- 4. SCREENSTREAM COMPONENT (Adapted from ScreenStream/app.js) ---
-def screenstream_logic():
-    # This component implements the 'startScreenStreamFrom' logic from ScreenStream
-    # It uses the modern navigator.mediaDevices approach for better browser support
+# --- 4. REMOTE CONTROL COMPONENT (Inspired by Remote-Desktop-Control) ---
+def remote_control_interface():
+    # This simulates the remote desktop viewer and control signals
     js_code = """
-    <div style="background: #1e1e1e; padding: 20px; border-radius: 15px; border: 1px solid #333; text-align: center;">
-        <button id="start" style="background: #e74c3c; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s;">
-            🔴 START SCREENSTREAM
-        </button>
-        <video id="video" autoplay playsinline style="width: 100%; margin-top: 15px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); background: black;"></video>
+    <div style="background: #121212; padding: 15px; border-radius: 12px; color: #fff; font-family: sans-serif;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <button id="share" style="background: #27ae60; border: none; padding: 8px 15px; border-radius: 5px; color: white; cursor: pointer;">🌐 Share Desktop</button>
+            <span id="status" style="font-size: 12px; color: #bdc3c7;">Status: Standby</span>
+        </div>
+        <div id="container" style="position: relative; width: 100%; height: 400px; background: #000; border: 2px solid #333; overflow: hidden;">
+            <video id="remoteVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: contain;"></video>
+            <div id="overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair;"></div>
+        </div>
+        <p style="font-size: 11px; color: #7f8c8d; margin-top: 8px;">Remote Control Mode Active: Mouse/Keyboard signals ready for transmission.</p>
     </div>
 
     <script>
-    document.getElementById('start').addEventListener('click', () => {
-        // Implementation of ScreenStream's video stream logic
-        navigator.mediaDevices.getDisplayMedia({ 
-            video: { 
-                cursor: "always",
-                displaySurface: "browser" 
-            }, 
-            audio: False 
-        })
-        .then(stream => {
-            const videoElement = document.getElementById('video');
-            videoElement.srcObject = stream;
-            console.log("ScreenStream: Stream successfully started.");
-        })
-        .catch(err => { 
-            console.error("ScreenStream Error: " + err); 
-        });
+    const shareBtn = document.getElementById('share');
+    const status = document.getElementById('status');
+    const video = document.getElementById('remoteVideo');
+    const overlay = document.getElementById('overlay');
+
+    shareBtn.addEventListener('click', async () => {
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            video.srcObject = stream;
+            status.innerText = "Status: Transmitting Screen...";
+            status.style.color = "#2ecc71";
+        } catch (err) {
+            console.error("Error: " + err);
+        }
+    });
+
+    // Capture "Remote" Click Events (from Remote-Desktop-Control logic)
+    overlay.addEventListener('click', (e) => {
+        const rect = overlay.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        console.log(`Remote Command: Click at X:${x}, Y:${y}`);
+        // In a real implementation, this JSON would be sent to the backend socket
     });
     </script>
     """
-    components.html(js_code, height=600)
+    components.html(js_code, height=550)
 
-# --- 5. THE UI ---
+# --- 5. THE MAIN UI ---
 def run():
-    st.title("🤖 Lumina AI: Empathetic ScreenStream Monitoring")
+    st.title("🤖 Lumina AI: Remote Empathetic Assistant")
 
     if 'emotion' not in st.session_state: st.session_state['emotion'] = "Neutral"
 
-    col1, col2 = st.columns([1, 1.5])
+    col1, col2 = st.columns([1, 1.8])
 
     with col1:
-        st.subheader("👤 Student State Tracker")
+        st.subheader("👤 Student Perception")
         webrtc_streamer(
             key="cam",
             mode=WebRtcMode.SENDRECV,
@@ -106,40 +116,39 @@ def run():
         )
         
         st.divider()
-        st.subheader("💡 Lumina Scaffolding")
         emo = st.session_state['emotion']
         if emo == "Frustrated":
-            st.error("⚠️ Cognitive Overload Detected")
-            st.info("**Lumina AI Translation:**\n'I notice you're stuck on the homework. Let's simplify the instructions on your screen!'")
+            st.error("⚠️ Frustration Detected!")
+            st.info("**Lumina AI:** 'I'm reading your screen. Let me help you navigate this section!'")
         else:
             st.success(f"State: {emo}")
-            st.write("Ready to assist if frustration is detected.")
 
     with col2:
-        st.subheader("💻 Shared Workspace (ScreenStream)")
-        # This renders the ScreenStream UI based on the app.js logic you shared
-        screenstream_logic()
+        st.subheader("🖥️ Remote Desktop Interface")
+        remote_control_interface()
 
-    # --- 6. DYNAMIC MASCOT & FOOTER ---
+    # --- 6. THE DYNAMIC MASCOT FOOTER ---
     st.divider()
     m_col1, m_col2 = st.columns([1, 4])
     
     with m_col1:
-        # Mascot state reacts to affective computing results
         if emo == "Frustrated":
             st.image("https://cdn-icons-png.flaticon.com/512/4712/4712027.png", width=100)
+            st.markdown("**Lumina is Worried**")
         elif emo == "Happy":
             st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=100)
+            st.markdown("**Lumina is Cheering!**")
         else:
             st.image("https://cdn-icons-png.flaticon.com/512/4712/4712010.png", width=100)
+            st.markdown("**Lumina is Ready**")
 
     with m_col2:
         if emo == "Frustrated":
-            st.info(f"🤖 **Lumina:** Hey! Don't let the problem stress you out. I'm watching your shared screen and ready to help!")
+            st.info("🤖 **Lumina says:** I can see exactly what you're working on. Don't worry about the hard parts—I'll help you navigate the screen!")
         else:
-            st.write(f"🤖 **Lumina:** I can see your homework! You're doing a great job staying focused.")
+            st.write("🤖 **Lumina says:** Ready to assist! Use the green button to share your desktop so I can guide you.")
         
-        st.caption("Developed by Puteri Aisyah Sofia | MSc Applied Computing | UTP | Doha, Qatar")
+        st.caption("Puteri Aisyah Sofia | MSc Applied Computing | UTP | Doha, Qatar")
 
 if __name__ == "__main__":
     run()
