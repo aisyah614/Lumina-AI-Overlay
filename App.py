@@ -2,11 +2,7 @@ import numpy as np
 import cv2
 import streamlit as st
 import tensorflow as tf
-from tensorflow import keras
-from keras.models import model_from_json
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration, WebRtcMode
-import time
-import os
+from tensorflow.keras.models import model_from_json
 
 # --- 1. RESEARCH CONFIGURATION (Chapter 1.3) ---
 # Mapping to your 3 required states for the MSc project
