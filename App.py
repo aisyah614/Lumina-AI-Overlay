@@ -9,7 +9,6 @@ import os
 import av
 
 # --- 1. RESEARCH CONFIGURATION ---
-# Defines the specific affective states targeted for the MSc dissertation.
 EMOTION_LABELS = {0: 'Happy', 1: 'Frustrated', 2: 'Neutral'}
 RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
 
@@ -18,7 +17,6 @@ st.set_page_config(page_title="Lumina AI: Inclusive Education", page_icon="🤖"
 # --- 2. ADAPTIVE MODEL LOADING ---
 @st.cache_resource
 def load_lumina_model():
-    """Fallback mechanism to prevent Segmentation Faults on Streamlit Cloud."""
     try:
         if os.path.exists('model.json'):
             with open('model.json', 'r') as f:
@@ -31,7 +29,7 @@ def load_lumina_model():
 
 emotion_model = load_lumina_model()
 
-# --- 3. PERCEPTION MODULE (Affective Logic) ---
+# --- 3. PERCEPTION MODULE (Student Face Tracking) ---
 class LuminaPerception:
     def __init__(self):
         self.current_state = "Neutral"
@@ -54,7 +52,6 @@ class LuminaPerception:
                 preds = emotion_model.predict(roi, verbose=0)[0]
                 detected = EMOTION_LABELS[np.argmax(preds)]
             
-            # Temporal Smoothing: Mode filter to prevent flickering.
             self.history.append(detected)
             if len(self.history) > 10: self.history.pop(0)
             self.current_state = max(set(self.history), key=self.history.count)
@@ -65,7 +62,26 @@ class LuminaPerception:
         st.session_state['detected_state'] = self.current_state
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# --- 4. THE MAIN UI ---
+# --- 4. IGCSE SCAFFOLDING ENGINE ---
+def get_igcse_scaffolding():
+    """Simulates AI understanding of IGCSE Syllabus content."""
+    st.markdown("### 📘 Lumina IGCSE Simplified Guide")
+    st.write("---")
+    colA, colB = st.columns([2, 1])
+    
+    with colA:
+        st.info("**Main Concept: Key Bullet Points**")
+        st.write("* **Focus:** The question asks for 'Explain' - this means use 'Because' or 'Therefore'.")
+        st.write("* **Step 1:** Identify the core variable mentioned in your screen share.")
+        st.write("* **Step 2:** Relate it to the IGCSE marking scheme (Point + Development).")
+        st.write("* **Step 3:** Use a simple real-world analogy to remember the definition.")
+    
+    with colB:
+        # Placeholder for visual scaffolding (IGCSE Diagrams)
+        st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Simple_Symmetry_Diagram.svg/200px-Simple_Symmetry_Diagram.svg.png", 
+                 caption="IGCSE Visual Aid: Core Structure")
+
+# --- 5. THE MAIN UI ---
 def run_app():
     st.title("🤖 Lumina AI: Empathetic Assistive Technology")
     
@@ -75,7 +91,7 @@ def run_app():
     col1, col2 = st.columns([1, 1])
 
     with col1:
-        st.subheader("👤 Student Feed")
+        st.subheader("👤 Student Feed & Tracking")
         webrtc_streamer(
             key="student-cam",
             mode=WebRtcMode.SENDRECV,
@@ -83,49 +99,57 @@ def run_app():
             rtc_configuration=RTC_CONFIG,
             async_processing=True,
         )
+        
+        st.write("---")
+        st.subheader("💻 Homework Screen Capture")
+        st.caption("Share your IGCSE Worksheet or PDF below:")
+        webrtc_streamer(
+            key="homework-screen",
+            mode=WebRtcMode.SENDRECV,
+            rtc_configuration=RTC_CONFIG,
+            video_processor_factory=None,
+            media_stream_constraints={"video": {"displaySurface": "browser"}, "audio": False},
+        )
 
     with col2:
-        st.subheader("💡 Lumina Scaffolding")
+        st.subheader("💡 Lumina Scaffolding Layer")
         current_emo = st.session_state['detected_state']
         
-        # Scaffolding Logic Gate (5-second threshold)
         if current_emo == "Frustrated":
             if st.session_state.frustrated_since is None:
                 st.session_state.frustrated_since = time.time()
             elapsed = time.time() - st.session_state.frustrated_since
             
             if elapsed >= 5:
-                st.error("⚠️ Cognitive Overload Detected")
-                st.info("**Lumina AI Simplification:**\n'I notice this section might be challenging. Let's focus on the keywords first!'")
+                st.error("⚠️ COGNITIVE OVERLOAD DETECTED")
+                # Trigger the IGCSE Scaffolding Engine
+                get_igcse_scaffolding()
             else:
-                st.warning(f"Monitoring Learning Persistence... {int(elapsed)}s / 5s")
+                st.warning(f"Monitoring Cognitive Persistence... {int(elapsed)}s / 5s")
+                st.write("Student is currently attempting high-density content.")
         else:
             st.session_state.frustrated_since = None
-            st.success(f"State: {current_emo}")
-            st.write("Standard difficulty material is active.")
+            st.success(f"Student State: {current_emo}")
+            st.write("Lumina is monitoring. Continue with your homework.")
 
-    # --- 5. THE LUMINA MASCOT (Bottom of Screen) ---
+    # --- 6. THE DYNAMIC MASCOT ---
     st.markdown("---")
-    
-    # Mascot Column Layout
     m_col1, m_col2 = st.columns([1, 4])
     
     with m_col1:
-        # Dynamic Mascot reacting to the Affective Perception Module
         if current_emo == "Frustrated":
-            st.error("(＞﹏＜) ") # Worried Mascot
-            st.caption("Lumina: Breathe... I'm here!")
+            st.error(" ( >_< ) ") # Worried
+            st.caption("**Lumina:** Don't worry, Aisyah! I've simplified the syllabus notes for you on the right. We can do this!")
         elif current_emo == "Happy":
-            st.success(" (＾∇＾)ノ ") # Cheer Mascot
-            st.caption("Lumina: You're doing great!")
+            st.success(" ( ^▽^)┛") # Cheering
+            st.caption("**Lumina:** Looking good! You're mastering this IGCSE topic quickly!")
         else:
-            st.write(" (･_･) ")   # Neutral Mascot
-            st.caption("Lumina: Standing by.")
+            st.write(" ( •_• ) ")  # Ready
+            st.caption("**Lumina:** I'm watching your screen. Just start your homework whenever you're ready.")
 
     with m_col2:
-        # Academic Branding
-        st.caption("Developed by Puteri Aisyah Sofia (ID: 25014776) | MSc Applied Computing | UTP")
-        st.caption("Project: Enhancing Inclusive Education through Empathetic Assistive Technology")
+        st.caption("Developed by Puteri Aisyah Sofia | MSc Applied Computing | UTP")
+        st.caption("Project: Lumina AI - Empathetic Assistive Technology for Inclusive Education")
 
 if __name__ == "__main__":
     run_app()
