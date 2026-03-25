@@ -1,27 +1,24 @@
 import numpy as np
 import cv2
 import streamlit as st
-import time
 import os
 import av
 from PIL import Image
 import pytesseract
 
-# SAFE TensorFlow import (prevents crash on Streamlit Cloud)
+# SAFE TensorFlow import
 try:
     import tensorflow as tf
 except:
     tf = None
 
+from streamlit_webrtc import webrtc_streamer, WebRtcMode
+
 # ---------------- CONFIG ----------------
 RAW_LABELS = {
-    0: 'Angry',
-    1: 'Disgust',
-    2: 'Fear',
-    3: 'Happy',
-    4: 'Sad',
-    5: 'Surprise',
-    6: 'Neutral'
+    0: 'Frustrated',
+    1: 'Happy',
+    2: 'Neutral'
 }
 
 RTC_CONFIG = {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
@@ -49,7 +46,9 @@ class LuminaPerception:
     def __init__(self):
         self.history = []
         self.state = "Neutral"
-        self.face = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        self.face = cv2.CascadeClassifier(
+            cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        )
 
     def recv(self, frame):
         img = frame.to_ndarray(format="bgr24")
@@ -57,9 +56,9 @@ class LuminaPerception:
 
         faces = self.face.detectMultiScale(gray, 1.3, 5)
 
-        for (x,y,w,h) in faces:
-            roi = cv2.resize(gray[y:y+h, x:x+w], (48,48)) / 255.0
-            roi = roi.reshape(1,48,48,1)
+        for (x, y, w, h) in faces:
+            roi = cv2.resize(gray[y:y+h, x:x+w], (48, 48)) / 255.0
+            roi = roi.reshape(1, 48, 48, 1)
 
             if model is not None:
                 preds = model.predict(roi, verbose=0)[0]
@@ -69,49 +68,72 @@ class LuminaPerception:
                 if confidence < 0.6:
                     detected = "Neutral"
                 else:
-                    if raw_emotion in ['Angry', 'Sad', 'Fear']:
+                    if raw_emotion == 'Frustrated':
                         detected = "Frustrated"
                     elif raw_emotion == 'Happy':
                         detected = "Happy"
                     else:
                         detected = "Neutral"
             else:
-                # SAFE fallback if TF fails
                 detected = "Neutral"
 
+            # smoothing
             self.history.append(detected)
             if len(self.history) > 15:
                 self.history.pop(0)
 
             self.state = max(set(self.history), key=self.history.count)
 
-            cv2.putText(img, self.state, (x,y-10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
+            cv2.putText(img, self.state, (x, y-10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
         st.session_state['emotion'] = self.state
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
+
+# ---------------- SCREEN SHARE ----------------
+class ScreenProcessor:
+    def recv(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+        st.session_state['screen_frame'] = img
+        return av.VideoFrame.from_ndarray(img, format="bgr24")
+
+
 # ---------------- SIMPLIFIER ----------------
 def simplify_text(text):
     if len(text.strip()) == 0:
-        return "Upload screen to simplify"
+        return "Upload or share screen to simplify"
 
     lines = text.split('.')
     bullets = [f"• {l.strip()}" for l in lines if len(l.strip()) > 5]
 
     return "\n".join(bullets[:5])
 
+
 # ---------------- UI ----------------
 def run():
     st.title("🤖 Lumina AI Learning Assistant")
 
+    # session state init
     if 'emotion' not in st.session_state:
         st.session_state['emotion'] = "Neutral"
 
+    if 'screen_frame' not in st.session_state:
+        st.session_state['screen_frame'] = None
+
+    # -------- MODE SELECTOR --------
+    st.subheader("📺 Choose Input Method")
+    mode = st.radio(
+        "",
+        ["Live Screen Share", "Upload Screenshot"],
+        horizontal=True
+    )
+
     col1, col2 = st.columns(2)
 
+    # -------- LEFT SIDE --------
     with col1:
-        st.subheader("Student Camera")
-        from streamlit_webrtc import webrtc_streamer
+        st.subheader("📷 Student Camera")
 
         webrtc_streamer(
             key="cam",
@@ -119,14 +141,42 @@ def run():
             rtc_configuration=RTC_CONFIG
         )
 
-        st.subheader("📺 Share Screen (Upload)")
-        uploaded = st.file_uploader("Upload screenshot", type=["png","jpg","jpeg"])
+        uploaded = None
 
+        if mode == "Live Screen Share":
+            st.subheader("📺 Live Screen")
+
+            st.info("Click START → Select Screen / Window / Tab")
+
+            webrtc_streamer(
+                key="screen",
+                mode=WebRtcMode.SENDRECV,
+                video_processor_factory=ScreenProcessor,
+                rtc_configuration=RTC_CONFIG,
+                media_stream_constraints={"video": True, "audio": False},
+            )
+
+        elif mode == "Upload Screenshot":
+            st.subheader("📁 Upload Screen")
+
+            uploaded = st.file_uploader(
+                "Upload screenshot",
+                type=["png", "jpg", "jpeg"]
+            )
+
+    # -------- RIGHT SIDE --------
     with col2:
         st.subheader("💡 Lumina Simplifier")
 
-        if uploaded is not None:
+        img = None
+
+        if mode == "Upload Screenshot" and uploaded is not None:
             img = Image.open(uploaded)
+
+        elif mode == "Live Screen Share" and st.session_state['screen_frame'] is not None:
+            img = Image.fromarray(st.session_state['screen_frame'])
+
+        if img is not None:
             st.image(img, caption="Student Screen")
 
             text = pytesseract.image_to_string(img)
@@ -137,7 +187,10 @@ def run():
                 st.write(simplified)
             else:
                 st.info("No frustration detected yet...")
+        else:
+            st.warning("No screen input yet")
 
+    # -------- MASCOT --------
     st.markdown("---")
 
     emo = st.session_state['emotion']
