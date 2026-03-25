@@ -10,27 +10,27 @@ import torchvision.transforms as transforms
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
 
 # --- 1. RESEARCH CONFIGURATION ---
-# FER.Pytorch standard labels
 FER_LABELS = {0: 'Angry', 1: 'Disgust', 2: 'Fear', 3: 'Happy', 4: 'Sad', 5: 'Surprise', 6: 'Neutral'}
 SCAFFOLD_TRIGGERS = ['Angry', 'Fear', 'Sad', 'Disgust']
-
 RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
 
 st.set_page_config(page_title="Lumina AI: PyTorch FER Engine", layout="wide", page_icon="🤖")
 
-# --- 2. PYTORCH MODEL LOADING ---
+# --- 2. PYTORCH MODEL LOADING (With Error Handling) ---
 @st.cache_resource
 def load_pytorch_fer():
     try:
-        # Note: You must have your model class (e.g., VGG or ResNet) defined or imported
-        # For the demo, we assume you have exported your weights to 'fer_model.pt'
+        # Check if the weight file exists
         if os.path.exists('fer_model.pt'):
+            # Note: For a custom architecture, you'd usually define the class first
+            # If you exported the whole model, this works:
             model = torch.load('fer_model.pt', map_location=torch.device('cpu'))
             model.eval()
             return model
+        else:
+            return "MISSING_MODEL"
     except Exception as e:
-        st.error(f"PyTorch Engine Error: {e}")
-    return None
+        return str(e)
 
 fer_net = load_pytorch_fer()
 
@@ -42,7 +42,7 @@ class PyTorchFERPerception:
         self.current_state = "Neutral"
         self.transform = transforms.Compose([
             transforms.ToPILImage(),
-            transforms.Resize((44, 44)), # FER.Pytorch standard resize
+            transforms.Resize((44, 44)), 
             transforms.ToTensor(),
         ])
 
@@ -55,11 +55,11 @@ class PyTorchFERPerception:
         for (x, y, w, h) in faces:
             cv2.rectangle(img, (x, y), (x+w, y+h), (74, 144, 226), 2)
             
-            if fer_net is not None:
+            # Only predict if the model loaded successfully
+            if not isinstance(fer_net, str):
                 try:
                     roi = gray[y:y+h, x:x+w]
                     roi_tensor = self.transform(roi).unsqueeze(0)
-                    
                     with torch.no_grad():
                         outputs = fer_net(roi_tensor)
                         _, predicted = torch.max(outputs, 1)
@@ -72,7 +72,6 @@ class PyTorchFERPerception:
 
 # --- 4. AUTO-SCAFFOLDING ENGINE ---
 def auto_scaffold_generator(text):
-    """Transforms complex text into simplified bullet points for IGCSE students."""
     if not text: return []
     sentences = text.split('.')
     points = []
@@ -80,7 +79,6 @@ def auto_scaffold_generator(text):
         clean = s.strip()
         if len(clean) > 15:
             words = clean.split()
-            # Scaffolding: Extract core 60% of sentence to simplify cognitive load
             summary = " ".join(words[:int(len(words)*0.65)])
             points.append(f"• {summary}...")
     return points
@@ -118,6 +116,12 @@ def remote_desktop_ui():
 def run():
     st.title("🤖 Lumina AI x PyTorch: Neural Inclusive Education")
     
+    # Handle Model Loading Alerts
+    if fer_net == "MISSING_MODEL":
+        st.warning("⚠️ Model weights 'fer_model.pt' not found. Lumina is running in simulation mode.")
+    elif isinstance(fer_net, str):
+        st.error(f"❌ PyTorch Error: {fer_net}")
+
     if 'emo_state' not in st.session_state: st.session_state['emo_state'] = "Neutral"
     if 'auto_notes' not in st.session_state: st.session_state['auto_notes'] = []
 
@@ -138,53 +142,32 @@ def run():
         st.divider()
         state = st.session_state['emo_state']
         
-        # --- THE AUTO-TRIGGER ---
         if state in SCAFFOLD_TRIGGERS:
             st.error(f"⚠️ Neural Detection: {state.upper()}")
-            # Simulation of detected IGCSE complex content (e.g., Biology)
-            complex_text = "The chloroplast is the organelle where photosynthesis occurs in photosynthetic eukaryotes. It is characterized by its high concentration of chlorophyll, the pigment that captures light energy."
+            # Biology Content Simulation
+            complex_text = "The chloroplast is the organelle where photosynthesis occurs. It has a high concentration of chlorophyll which captures light energy."
             st.session_state['auto_notes'] = auto_scaffold_generator(complex_text)
-            st.warning("🤖 **Lumina Neural Assist:** I've detected a learning barrier. Scaffolding is active.")
+            st.warning("🤖 **Lumina Assist:** Barrier detected. Scaffolding active.")
         else:
             st.success(f"System State: {state}")
 
     with col_right:
         tab_desktop, tab_scaffold = st.tabs(["🖥️ Desktop View", "📚 PyTorch Scaffolding"])
-        
         with tab_desktop:
             remote_desktop_ui()
-            
         with tab_scaffold:
             st.subheader("🚀 Real-Time Simplified Notes")
             if st.session_state['auto_notes']:
                 notes_html = "".join([f"<p style='margin-bottom:15px;'>{p}</p>" for p in st.session_state['auto_notes']])
-                st.markdown(
-                    f"""
-                    <div style="font-size: 24px; background: #fdf2f2; padding: 30px; 
-                    border-radius: 15px; border-left: 10px solid #e74c3c; color: #2c3e50; line-height: 1.5;">
-                        <h3 style="color: #e74c3c; margin-top:0;">🤖 PyTorch Support Active:</h3>
-                        {notes_html}
-                    </div>
-                    """, unsafe_allow_html=True
-                )
+                st.markdown(f"<div style='font-size: 24px; background: #fdf2f2; padding: 30px; border-radius: 15px; border-left: 10px solid #e74c3c;'>{notes_html}</div>", unsafe_allow_html=True)
                 if st.button("✅ I understand this"):
                     st.session_state['auto_notes'] = []
                     st.rerun()
             else:
-                st.info("The PyTorch FER model is monitoring your session. Scaffolding appears if frustration is detected.")
+                st.info("Monitoring session. Scaffolding appears if frustration is detected.")
 
-    # --- 7. MASCOT FOOTER ---
     st.divider()
-    m_left, m_right = st.columns([1, 5])
-    with m_left:
-        icon_id = "4712027" if state in SCAFFOLD_TRIGGERS else ("4712035" if state == 'Happy' else "4712010")
-        st.image(f"https://cdn-icons-png.flaticon.com/512/4712/{icon_id}.png", width=100)
-    with m_right:
-        if state in SCAFFOLD_TRIGGERS:
-            st.write(f"🤖 **Lumina:** PyTorch analysis indicates you're feeling {state}. I've simplified the Biology notes for you.")
-        else:
-            st.write("🤖 **Lumina:** Great work, Puteri Aisyah! Your focus is excellent.")
-        st.caption("Puteri Aisyah Sofia | Student ID: 25014776 | MSc Applied Computing | UTP | Al-Khor, Qatar")
+    st.caption("Puteri Aisyah Sofia | MSc Applied Computing | UTP | Al-Khor, Qatar")
 
 if __name__ == "__main__":
     run()
