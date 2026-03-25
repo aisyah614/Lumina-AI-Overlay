@@ -1,6 +1,7 @@
 streamlit
 streamlit-webrtc
 tensorflow-cpu
+tensorflowjs
 opencv-python-headless
 numpy
 pillow
