@@ -51,55 +51,19 @@ class LuminaPerception:
             
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# --- 4. KEEP IT SIMPLE AI: BULLET-POINT TRANSFORMER ---
-def text_simplification_tool():
-    st.subheader("📝 IGCSE Scaffolding Tool")
-    input_text = st.text_area("Paste complex textbook paragraphs here:", height=150, 
-                              placeholder="e.g., 'The mitochondria is the powerhouse of the cell...'")
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        level = st.selectbox("Complexity Level:", ["Super Simple", "Core Points Only", "Detailed Summary"])
-    with col2:
-        bionic = st.checkbox("Enable Bionic Reading")
-    with col3:
-        font_size = st.slider("Visual Size", 14, 40, 22)
-
-    if st.button("✨ Simplify into Bullet Points"):
-        if input_text:
-            # 1. Break into points (Simulating LLM simplification)
-            raw_points = [p.strip() for p in input_text.split('.') if len(p.strip()) > 5]
-            
-            # 2. Logic to reduce wordiness (Scaffolding Logic)
-            bullet_points = []
-            for point in raw_points:
-                words = point.split()
-                # Limit each point to key info (approx first 60% of words) to avoid word-for-word copy
-                short_point = " ".join(words[:int(len(words)*0.7)])
-                bullet_points.append(f"• {short_point}...")
-
-            # 3. Apply Bionic Reading to bullet points
-            final_html = ""
-            for bp in bullet_points:
-                if bionic:
-                    bp = " ".join([f"<b>{word[:len(word)//2+1]}</b>{word[len(word)//2+1:]}" for word in bp.split()])
-                final_html += f"<p style='margin-bottom: 10px;'>{bp}</p>"
-
-            # 4. Render the UI
-            st.markdown(
-                f"""
-                <div style="font-size: {font_size}px; background: #f9f9f9; padding: 25px; 
-                border-radius: 12px; color: #333; border-left: 10px solid #4A90E2; 
-                line-height: 1.6; font-family: 'Helvetica', sans-serif;">
-                    <h4 style="color: #4A90E2; margin-top: 0;">🤖 Lumina Simplified View:</h4>
-                    {final_html}
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )
-            st.download_button("📥 Save Simplified Notes", "\n".join(bullet_points), file_name="igcse_notes.txt")
-        else:
-            st.warning("Please enter text for Lumina to simplify.")
+# --- 4. AUTO-SCAFFOLDING ENGINE ---
+def auto_scaffold_text(text):
+    """Automatically transforms complex text into simplified bullet points."""
+    # Simulation of simplifying text without word-for-word copying
+    sentences = text.split('.')
+    points = []
+    for s in sentences:
+        if len(s.strip()) > 10:
+            words = s.strip().split()
+            # Scaffolding: Keep key first 60% of sentence to simplify
+            summary = " ".join(words[:int(len(words)*0.6)])
+            points.append(f"• {summary}...")
+    return points
 
 # --- 5. REMOTE DESKTOP COMPONENT ---
 def remote_control_interface():
@@ -134,8 +98,11 @@ def remote_control_interface():
 
 # --- 6. MAIN UI ---
 def run():
-    st.title("🤖 Lumina AI x Keep-It-Simple: Inclusive Learning")
+    st.title("🤖 Lumina AI: Auto-Adaptive Inclusive Education")
+    
+    # Initialize session states
     if 'emotion' not in st.session_state: st.session_state['emotion'] = "Neutral"
+    if 'scaffold_notes' not in st.session_state: st.session_state['scaffold_notes'] = []
 
     left_panel, right_panel = st.columns([1, 2])
 
@@ -145,18 +112,48 @@ def run():
         
         st.divider()
         emo = st.session_state['emotion']
+        
+        # --- AUTO TRIGGER LOGIC ---
         if emo == "Frustrated":
             st.error("⚠️ Cognitive Overload Detected")
-            st.info("🤖 **Lumina:** You look a bit stuck. I've activated the **Scaffolding Tool** on the right. Paste the paragraph there and I'll break it down!")
+            
+            # SIMULATED SCREEN CONTENT (In real version, this is OCR from your screen share)
+            complex_content = "The mitochondria are double-membrane-bound organelles found in most eukaryotic organisms. They generate most of the cell's supply of adenosine triphosphate (ATP), used as a source of chemical energy."
+            
+            # Auto-run the simplification
+            st.session_state['scaffold_notes'] = auto_scaffold_text(complex_content)
+            
+            st.warning("🤖 **Lumina:** I see you're struggling. I've automatically simplified your screen content in the **Scaffolding** tab!")
         else:
             st.success(f"State: {emo}")
 
     with right_panel:
-        tab1, tab2 = st.tabs(["🖥️ Desktop View", "📚 Text Scaffolding"])
+        tab1, tab2 = st.tabs(["🖥️ Desktop View", "📚 Auto-Scaffolding"])
+        
         with tab1:
             remote_control_interface()
+            
         with tab2:
-            text_simplification_tool()
+            st.subheader("🚀 Lumina Real-Time Notes")
+            if st.session_state['scaffold_notes']:
+                # Generate HTML for the bullet points
+                points_html = "".join([f"<p style='margin-bottom:15px;'>{p}</p>" for p in st.session_state['scaffold_notes']])
+                
+                st.markdown(
+                    f"""
+                    <div style="font-size: 24px; background: #f0f8ff; padding: 30px; 
+                    border-radius: 15px; border-left: 10px solid #FF4B4B; color: #333;">
+                        <h3 style="color: #FF4B4B; margin-top:0;">🤖 Simplified for You:</h3>
+                        {points_html}
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
+                if st.button("✅ I understand now"):
+                    st.session_state['scaffold_notes'] = []
+                    st.rerun()
+            else:
+                st.info("Lumina is monitoring your shared screen. If you feel frustrated, simplified notes will appear here automatically!")
 
     # --- 7. MASCOT FOOTER ---
     st.divider()
@@ -166,9 +163,9 @@ def run():
         st.image(f"https://cdn-icons-png.flaticon.com/512/4712/{icon_code}.png", width=100)
     with m2:
         if emo == "Frustrated":
-            st.write("🤖 **Lumina:** I'm here to simplify the hard parts. Look at the bullet points I prepared!")
+            st.write("🤖 **Lumina:** Don't worry, Puteri Aisyah! I've broken down the hard sentences into bullet points for you.")
         else:
-            st.write("🤖 **Lumina:** You're doing great! Keep sharing your screen so I can monitor your progress.")
+            st.write("🤖 **Lumina:** You're doing great. I'm keeping an eye on your screen to help if it gets too hard.")
         st.caption("Puteri Aisyah Sofia | MSc Applied Computing | UTP | Doha, Qatar")
 
 if __name__ == "__main__":
