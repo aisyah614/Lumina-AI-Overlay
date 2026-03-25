@@ -2,154 +2,132 @@ import numpy as np
 import cv2
 import streamlit as st
 import tensorflow as tf
-from tensorflow.keras.models import model_from_json
 from streamlit_webrtc import webrtc_streamer, RTCConfiguration, WebRtcMode
 import time
 import os
 import av
+from PIL import Image
 
-# --- 1. RESEARCH CONFIGURATION ---
+# ---------------- CONFIG ----------------
 EMOTION_LABELS = {0: 'Happy', 1: 'Frustrated', 2: 'Neutral'}
 RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
 
-st.set_page_config(page_title="Lumina AI: Inclusive Education", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="Lumina AI", layout="wide")
 
-# --- 2. ADAPTIVE MODEL LOADING ---
+# ---------------- MODEL LOADING ----------------
 @st.cache_resource
-def load_lumina_model():
+def load_model():
     try:
-        if os.path.exists('model.json'):
-            with open('model.json', 'r') as f:
-                model_json = f.read()
-            model = tf.keras.models.model_from_json(model_json)
-            return model
-        return "LightMode"
-    except Exception:
-        return "LightMode"
+        if os.path.exists('model.h5'):
+            return tf.keras.models.load_model('model.h5')
+        return None
+    except:
+        return None
 
-emotion_model = load_lumina_model()
+model = load_model()
 
-# --- 3. PERCEPTION MODULE (Student Face Tracking) ---
+# ---------------- PERCEPTION ----------------
 class LuminaPerception:
     def __init__(self):
-        self.current_state = "Neutral"
-        self.history = [] 
+        self.history = []
+        self.state = "Neutral"
 
     def recv(self, frame):
         img = frame.to_ndarray(format="bgr24")
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
-        for (x, y, w, h) in faces:
-            cv2.rectangle(img, (x, y), (x+w, y+h), (74, 144, 226), 2)
-            roi = cv2.resize(gray[y:y+h, x:x+w], (48, 48)).astype('float32') / 255.0
-            roi = np.expand_dims(np.expand_dims(roi, axis=0), axis=-1)
+        face = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        faces = face.detectMultiScale(gray, 1.3, 5)
 
-            if emotion_model == "LightMode":
+        for (x,y,w,h) in faces:
+            roi = cv2.resize(gray[y:y+h, x:x+w], (48,48)) / 255.0
+            roi = roi.reshape(1,48,48,1)
+
+            if model is not None:
+                pred = model.predict(roi, verbose=0)
+                detected = EMOTION_LABELS[np.argmax(pred)]
+            else:
                 detected = "Frustrated"
-            elif emotion_model:
-                preds = emotion_model.predict(roi, verbose=0)[0]
-                detected = EMOTION_LABELS[np.argmax(preds)]
-            
+
             self.history.append(detected)
-            if len(self.history) > 10: self.history.pop(0)
-            self.current_state = max(set(self.history), key=self.history.count)
-                
-            cv2.putText(img, f"Lumina: {self.current_state}", (x, y-10), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-        
-        st.session_state['detected_state'] = self.current_state
+            if len(self.history) > 10:
+                self.history.pop(0)
+
+            self.state = max(set(self.history), key=self.history.count)
+
+            cv2.putText(img, self.state, (x,y-10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
+
+        st.session_state['emotion'] = self.state
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# --- 4. IGCSE SCAFFOLDING ENGINE ---
-def get_igcse_scaffolding():
-    """Simulates AI understanding of IGCSE Syllabus content."""
-    st.markdown("### 📘 Lumina IGCSE Simplified Guide")
-    st.write("---")
-    colA, colB = st.columns([2, 1])
-    
-    with colA:
-        st.info("**Main Concept: Key Bullet Points**")
-        st.write("* **Focus:** The question asks for 'Explain' - this means use 'Because' or 'Therefore'.")
-        st.write("* **Step 1:** Identify the core variable mentioned in your screen share.")
-        st.write("* **Step 2:** Relate it to the IGCSE marking scheme (Point + Development).")
-        st.write("* **Step 3:** Use a simple real-world analogy to remember the definition.")
-    
-    with colB:
-        # Placeholder for visual scaffolding (IGCSE Diagrams)
-        st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Simple_Symmetry_Diagram.svg/200px-Simple_Symmetry_Diagram.svg.png", 
-                 caption="IGCSE Visual Aid: Core Structure")
+# ---------------- SIMPLIFIER ----------------
+def simplify_text(text):
+    """Simple rule-based placeholder (replace later with LLM/API)"""
+    if len(text.strip()) == 0:
+        return "Upload screen to simplify"
 
-# --- 5. THE MAIN UI ---
-def run_app():
-    st.title("🤖 Lumina AI: Empathetic Assistive Technology")
-    
-    if 'frustrated_since' not in st.session_state: st.session_state.frustrated_since = None
-    if 'detected_state' not in st.session_state: st.session_state.detected_state = "Neutral"
+    lines = text.split('.')
+    bullets = [f"• {l.strip()}" for l in lines if len(l.strip()) > 5]
 
-    col1, col2 = st.columns([1, 1])
+    return "\n".join(bullets[:5])
 
+# ---------------- UI ----------------
+def run():
+    st.title("🤖 Lumina AI Learning Assistant")
+
+    if 'emotion' not in st.session_state:
+        st.session_state['emotion'] = "Neutral"
+
+    col1, col2 = st.columns(2)
+
+    # -------- CAMERA --------
     with col1:
-        st.subheader("👤 Student Feed & Tracking")
+        st.subheader("Student Camera")
         webrtc_streamer(
-            key="student-cam",
-            mode=WebRtcMode.SENDRECV,
+            key="cam",
             video_processor_factory=LuminaPerception,
-            rtc_configuration=RTC_CONFIG,
-            async_processing=True,
-        )
-        
-        st.write("---")
-        st.subheader("💻 Homework Screen Capture")
-        st.caption("Share your IGCSE Worksheet or PDF below:")
-        webrtc_streamer(
-            key="homework-screen",
-            mode=WebRtcMode.SENDRECV,
-            rtc_configuration=RTC_CONFIG,
-            video_processor_factory=None,
-            media_stream_constraints={"video": {"displaySurface": "browser"}, "audio": False},
+            rtc_configuration=RTC_CONFIG
         )
 
+        st.subheader("📺 Share Screen (Upload)")
+        uploaded = st.file_uploader("Upload screenshot", type=["png","jpg","jpeg"])
+
+    # -------- SIMPLIFIER --------
     with col2:
-        st.subheader("💡 Lumina Scaffolding Layer")
-        current_emo = st.session_state['detected_state']
-        
-        if current_emo == "Frustrated":
-            if st.session_state.frustrated_since is None:
-                st.session_state.frustrated_since = time.time()
-            elapsed = time.time() - st.session_state.frustrated_since
-            
-            if elapsed >= 5:
-                st.error("⚠️ COGNITIVE OVERLOAD DETECTED")
-                # Trigger the IGCSE Scaffolding Engine
-                get_igcse_scaffolding()
+        st.subheader("💡 Lumina Simplifier")
+
+        if uploaded is not None:
+            img = Image.open(uploaded)
+            st.image(img, caption="Student Screen")
+
+            # OCR
+            import pytesseract
+            text = pytesseract.image_to_string(img)
+
+            if st.session_state['emotion'] == "Frustrated":
+                st.error("⚠️ Frustration detected → Simplifying...")
+                simplified = simplify_text(text)
+                st.write(simplified)
             else:
-                st.warning(f"Monitoring Cognitive Persistence... {int(elapsed)}s / 5s")
-                st.write("Student is currently attempting high-density content.")
-        else:
-            st.session_state.frustrated_since = None
-            st.success(f"Student State: {current_emo}")
-            st.write("Lumina is monitoring. Continue with your homework.")
+                st.info("Waiting for difficulty signal...")
 
-    # --- 6. THE DYNAMIC MASCOT ---
+    # -------- MASCOT --------
     st.markdown("---")
-    m_col1, m_col2 = st.columns([1, 4])
-    
-    with m_col1:
-        if current_emo == "Frustrated":
-            st.error(" ( >_< ) ") # Worried
-            st.caption("**Lumina:** Don't worry, Aisyah! I've simplified the syllabus notes for you on the right. We can do this!")
-        elif current_emo == "Happy":
-            st.success(" ( ^▽^)┛") # Cheering
-            st.caption("**Lumina:** Looking good! You're mastering this IGCSE topic quickly!")
-        else:
-            st.write(" ( •_• ) ")  # Ready
-            st.caption("**Lumina:** I'm watching your screen. Just start your homework whenever you're ready.")
 
-    with m_col2:
-        st.caption("Developed by Puteri Aisyah Sofia | MSc Applied Computing | UTP")
-        st.caption("Project: Lumina AI - Empathetic Assistive Technology for Inclusive Education")
+    emo = st.session_state['emotion']
+
+    if emo == "Frustrated":
+        st.markdown("### 🤖💙 Lumina says: Don't worry, we’ll break it down together!")
+        st.image("https://cdn-icons-png.flaticon.com/512/4712/4712027.png", width=120)
+
+    elif emo == "Happy":
+        st.markdown("### 🤖✨ Lumina says: You're doing amazing, keep going!")
+        st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=120)
+
+    else:
+        st.markdown("### 🤖 Lumina: I'm here if you need help.")
+        st.image("https://cdn-icons-png.flaticon.com/512/4712/4712010.png", width=120)
+
 
 if __name__ == "__main__":
-    run_app()
+    run()
