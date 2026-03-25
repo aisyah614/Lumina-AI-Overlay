@@ -10,9 +10,9 @@ from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
 EMOTION_LABELS = {0: 'Frustrated', 1: 'Happy', 2: 'Neutral'}
 RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
 
-st.set_page_config(page_title="Lumina AI: Remote Assist", layout="wide", page_icon="🤖")
+st.set_page_config(page_title="Lumina AI: Inclusive Education", layout="wide", page_icon="🤖")
 
-# --- 2. MODEL LOADING ---
+# --- 2. MODEL LOADING (Affective Module) ---
 @st.cache_resource
 def load_lumina_model():
     try:
@@ -25,7 +25,7 @@ def load_lumina_model():
 
 model = load_lumina_model()
 
-# --- 3. PERCEPTION MODULE ---
+# --- 3. PERCEPTION MODULE (Student State) ---
 class LuminaPerception:
     def __init__(self):
         self.history = []
@@ -51,114 +51,94 @@ class LuminaPerception:
             
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# --- 4. REMOTE CONTROL COMPONENT (With Stop Button) ---
+# --- 4. KEEP IT SIMPLE AI INTEGRATION ---
+def text_simplification_tool():
+    st.subheader("📝 Text Simplification & Scaffolding")
+    input_text = st.text_area("Paste complex IGCSE content here:", height=150, placeholder="Enter text to simplify...")
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        level = st.selectbox("Simplify to:", ["Beginner", "Intermediate", "Advanced"])
+    with col2:
+        bionic = st.checkbox("Bionic Reading")
+    with col3:
+        font_size = st.slider("Text Size", 12, 32, 18)
+
+    if st.button("✨ Simplify for me"):
+        if input_text:
+            # Placeholder for the Keep-It-Simple LLM logic
+            simplified = f"Simplified to {level} level: {input_text[:100]}... [Simplified Content]"
+            
+            # Applying Bionic Reading effect (Visual Accessibility)
+            if bionic:
+                simplified = " ".join([f"**{word[:len(word)//2+1]}**{word[len(word)//2+1:]}" for word in simplified.split()])
+            
+            st.markdown(f'<div style="font-size: {font_size}px; background: white; padding: 20px; border-radius: 10px; color: black; border-left: 5px solid #4A90E2;">{simplified}</div>', unsafe_allow_all_html=True)
+            st.download_button("📥 Download PDF Summary", "PDF content here", file_name="simplified_notes.pdf")
+
+# --- 5. REMOTE CONTROL COMPONENT ---
 def remote_control_interface():
     js_code = """
-    <div style="background: #121212; padding: 15px; border-radius: 12px; color: #fff; font-family: sans-serif;">
+    <div style="background: #121212; padding: 10px; border-radius: 12px; border: 1px solid #333;">
         <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <button id="share" style="background: #27ae60; border: none; padding: 8px 15px; border-radius: 5px; color: white; cursor: pointer; font-weight: bold;">🌐 Start Sharing</button>
-            <button id="stop" style="background: #c0392b; border: none; padding: 8px 15px; border-radius: 5px; color: white; cursor: pointer; font-weight: bold; display: none;">🛑 Stop Sharing</button>
-            <span id="status" style="font-size: 12px; color: #bdc3c7; margin-top: 8px;">Status: Standby</span>
+            <button id="share" style="background: #27ae60; border: none; padding: 8px 15px; border-radius: 5px; color: white; cursor: pointer;">Start Desktop View</button>
+            <button id="stop" style="background: #c0392b; border: none; padding: 8px 15px; border-radius: 5px; color: white; cursor: pointer; display: none;">Stop</button>
         </div>
-        <div id="container" style="position: relative; width: 100%; height: 420px; background: #000; border: 2px solid #333; border-radius: 8px; overflow: hidden;">
-            <video id="remoteVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: contain;"></video>
-            <div id="overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair;"></div>
-        </div>
+        <video id="remoteVideo" autoplay playsinline style="width: 100%; height: 300px; background: #000; border-radius: 5px;"></video>
     </div>
-
     <script>
     const shareBtn = document.getElementById('share');
     const stopBtn = document.getElementById('stop');
-    const status = document.getElementById('status');
     const video = document.getElementById('remoteVideo');
-    let currentStream = null;
-
-    shareBtn.addEventListener('click', async () => {
-        try {
-            currentStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-            video.srcObject = currentStream;
-            
-            // UI Toggle
-            shareBtn.style.display = 'none';
-            stopBtn.style.display = 'inline-block';
-            status.innerText = "Status: Transmitting...";
-            status.style.color = "#2ecc71";
-
-            // Handle browser-native "Stop Sharing" bar
-            currentStream.getVideoTracks()[0].onended = stopScreenShare;
-
-        } catch (err) {
-            console.error("Error: " + err);
-        }
-    });
-
-    function stopScreenShare() {
-        if (currentStream) {
-            currentStream.getTracks().forEach(track => track.stop());
-            video.srcObject = null;
-            currentStream = null;
-        }
-        
-        // Reset UI
-        shareBtn.style.display = 'inline-block';
-        stopBtn.style.display = 'none';
-        status.innerText = "Status: Standby";
-        status.style.color = "#bdc3c7";
-    }
-
-    stopBtn.addEventListener('click', stopScreenShare);
+    let stream = null;
+    shareBtn.onclick = async () => {
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        video.srcObject = stream;
+        shareBtn.style.display='none'; stopBtn.style.display='inline';
+    };
+    stopBtn.onclick = () => {
+        stream.getTracks().forEach(t => t.stop());
+        video.srcObject = null;
+        shareBtn.style.display='inline'; stopBtn.style.display='none';
+    };
     </script>
     """
-    components.html(js_code, height=520)
+    components.html(js_code, height=400)
 
-# --- 5. MAIN UI ---
+# --- 6. THE MAIN UI ---
 def run():
-    st.title("🤖 Lumina AI: Advanced Collaborative Learning")
-
+    st.title("🤖 Lumina AI x Keep-It-Simple: Inclusive Learning")
     if 'emotion' not in st.session_state: st.session_state['emotion'] = "Neutral"
 
-    col1, col2 = st.columns([1, 1.8])
+    left_panel, right_panel = st.columns([1, 2])
 
-    with col1:
-        st.subheader("👤 Student Feed")
-        webrtc_streamer(
-            key="cam",
-            mode=WebRtcMode.SENDRECV,
-            video_processor_factory=LuminaPerception,
-            rtc_configuration=RTC_CONFIG,
-            media_stream_constraints={"video": True, "audio": False}
-        )
+    with left_panel:
+        st.subheader("👤 Student Tracker")
+        webrtc_streamer(key="cam", video_processor_factory=LuminaPerception, rtc_configuration=RTC_CONFIG)
         
         st.divider()
         emo = st.session_state['emotion']
         if emo == "Frustrated":
-            st.error("⚠️ Frustration Detected")
-            st.info("**Lumina AI:** 'Let's take a deep breath. I'm breaking down the content on your screen for you!'")
+            st.error("⚠️ Cognitive Overload Detected")
+            st.warning("🤖 **Lumina Tip:** Use the 'Keep It Simple' tool on the right to break down this complex text!")
         else:
-            st.success(f"Current State: {emo}")
+            st.success(f"State: {emo}")
 
-    with col2:
-        st.subheader("🖥️ Remote Assist Dashboard")
-        remote_control_interface()
+    with right_panel:
+        tab1, tab2 = st.tabs(["🖥️ Desktop Control", "📚 Text Scaffolding"])
+        with tab1:
+            remote_control_interface()
+        with tab2:
+            text_simplification_tool()
 
-    # --- 6. DYNAMIC MASCOT ---
+    # --- 7. MASCOT FOOTER ---
     st.divider()
-    m_col1, m_col2 = st.columns([1, 4])
-    
-    with m_col1:
-        if emo == "Frustrated":
-            st.image("https://cdn-icons-png.flaticon.com/512/4712/4712027.png", width=100)
-        elif emo == "Happy":
-            st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=100)
-        else:
-            st.image("https://cdn-icons-png.flaticon.com/512/4712/4712010.png", width=100)
-
-    with m_col2:
-        if emo == "Frustrated":
-            st.info("🤖 **Lumina says:** I'm here! Use the screen sharing tools to show me what's blocking you.")
-        else:
-            st.write("🤖 **Lumina says:** Ready for your next IGCSE challenge. You've got this!")
-        
+    m1, m2 = st.columns([1, 5])
+    with m1:
+        icon = "4712027" if emo == "Frustrated" else ("4712035" if emo == "Happy" else "4712010")
+        st.image(f"https://cdn-icons-png.flaticon.com/512/4712/{icon}.png", width=100)
+    with m2:
+        st.write(f"🤖 **Lumina:** {'Let me simplify that for you!' if emo == 'Frustrated' else 'Everything is looking good!'} You are doing great today.")
         st.caption("Puteri Aisyah Sofia | MSc Applied Computing | UTP | Doha, Qatar")
 
 if __name__ == "__main__":
