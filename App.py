@@ -73,8 +73,16 @@ def text_simplification_tool():
             if bionic:
                 simplified = " ".join([f"**{word[:len(word)//2+1]}**{word[len(word)//2+1:]}" for word in simplified.split()])
             
-            st.markdown(f'<div style="font-size: {font_size}px; background: white; padding: 20px; border-radius: 10px; color: black; border-left: 5px solid #4A90E2;">{simplified}</div>', unsafe_allow_all_html=True)
-            st.download_button("📥 Download PDF Summary", "PDF content here", file_name="simplified_notes.pdf")
+           # Change 'unsafe_allow_all_html' to 'unsafe_allow_html'
+st.markdown(
+    f"""
+    <div style="font-size: {font_size}px; background: white; padding: 20px; 
+    border-radius: 10px; color: black; border-left: 5px solid #4A90E2;">
+        {simplified}
+    </div>
+    """, 
+    unsafe_allow_html=True
+)
 
 # --- 5. REMOTE CONTROL COMPONENT ---
 def remote_control_interface():
