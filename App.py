@@ -1,16 +1,19 @@
 import numpy as np
 import cv2
 import streamlit as st
-import tensorflow as tf
-from streamlit_webrtc import webrtc_streamer, RTCConfiguration, WebRtcMode
 import time
 import os
 import av
 from PIL import Image
 import pytesseract
 
+# SAFE TensorFlow import (prevents crash on Streamlit Cloud)
+try:
+    import tensorflow as tf
+except:
+    tf = None
+
 # ---------------- CONFIG ----------------
-# Use REAL model labels first
 RAW_LABELS = {
     0: 'Angry',
     1: 'Disgust',
@@ -21,19 +24,22 @@ RAW_LABELS = {
     6: 'Neutral'
 }
 
-RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
+RTC_CONFIG = {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
 
 st.set_page_config(page_title="Lumina AI", layout="wide")
 
 # ---------------- MODEL LOADING ----------------
 @st.cache_resource
 def load_model():
+    if tf is None:
+        return None
+
     try:
         if os.path.exists('model.h5'):
-            return tf.keras.models.load_model('model.h5')
+            return tf.keras.models.load_model('model.h5', compile=False)
         return None
     except Exception as e:
-        st.error(f"Model load error: {e}")
+        st.warning(f"Model disabled: {e}")
         return None
 
 model = load_model()
@@ -60,11 +66,9 @@ class LuminaPerception:
                 confidence = np.max(preds)
                 raw_emotion = RAW_LABELS[np.argmax(preds)]
 
-                # Confidence filter
                 if confidence < 0.6:
                     detected = "Neutral"
                 else:
-                    # Map to YOUR system
                     if raw_emotion in ['Angry', 'Sad', 'Fear']:
                         detected = "Frustrated"
                     elif raw_emotion == 'Happy':
@@ -72,6 +76,7 @@ class LuminaPerception:
                     else:
                         detected = "Neutral"
             else:
+                # SAFE fallback if TF fails
                 detected = "Neutral"
 
             self.history.append(detected)
@@ -104,9 +109,10 @@ def run():
 
     col1, col2 = st.columns(2)
 
-    # -------- CAMERA --------
     with col1:
         st.subheader("Student Camera")
+        from streamlit_webrtc import webrtc_streamer
+
         webrtc_streamer(
             key="cam",
             video_processor_factory=LuminaPerception,
@@ -116,7 +122,6 @@ def run():
         st.subheader("📺 Share Screen (Upload)")
         uploaded = st.file_uploader("Upload screenshot", type=["png","jpg","jpeg"])
 
-    # -------- SIMPLIFIER --------
     with col2:
         st.subheader("💡 Lumina Simplifier")
 
@@ -133,7 +138,6 @@ def run():
             else:
                 st.info("No frustration detected yet...")
 
-    # -------- MASCOT --------
     st.markdown("---")
 
     emo = st.session_state['emotion']
