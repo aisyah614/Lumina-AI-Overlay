@@ -1,67 +1,3 @@
-import numpy as np
-import cv2
-import streamlit as st
-import tensorflow as tf
-from tensorflow.keras.models import model_from_json
-from streamlit_webrtc import webrtc_streamer, RTCConfiguration, WebRtcMode
-import time
-import os
-import av
-
-# --- 1. RESEARCH CONFIGURATION ---
-EMOTION_LABELS = {0: 'Happy', 1: 'Frustrated', 2: 'Neutral'}
-RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
-
-st.set_page_config(page_title="Lumina AI: Inclusive Education", page_icon="🤖", layout="wide")
-
-# --- 2. ADAPTIVE MODEL LOADING ---
-@st.cache_resource
-def load_lumina_model():
-    try:
-        with open('model.json', 'r') as f:
-            model_json = f.read()
-        model = tf.keras.models.model_from_json(model_json)
-        return model
-    except Exception as e:
-        st.warning("Running in Optimized Light Mode for Cloud Stability")
-        return "LightMode"
-
-emotion_model = load_lumina_model()
-
-# --- 3. PERCEPTION MODULE (With Smoothing Logic) ---
-class LuminaPerception:
-    def __init__(self):
-        self.current_state = "Neutral"
-        self.history = [] # For temporal smoothing
-
-    def recv(self, frame):
-        img = frame.to_ndarray(format="bgr24")
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-
-        for (x, y, w, h) in faces:
-            cv2.rectangle(img, (x, y), (x+w, y+h), (74, 144, 226), 2)
-            roi = cv2.resize(gray[y:y+h, x:x+w], (48, 48)).astype('float32') / 255.0
-            roi = np.expand_dims(np.expand_dims(roi, axis=0), axis=-1)
-
-            if emotion_model == "LightMode":
-                detected = "Frustrated"
-            elif emotion_model:
-                preds = emotion_model.predict(roi, verbose=0)[0]
-                detected = EMOTION_LABELS[np.argmax(preds)]
-            
-            # SMOOTHING: Require 10 consistent frames to change the UI state
-            self.history.append(detected)
-            if len(self.history) > 10: self.history.pop(0)
-            self.current_state = max(set(self.history), key=self.history.count)
-                
-            cv2.putText(img, f"Lumina: {self.current_state}", (x, y-10), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-        
-        st.session_state['detected_state'] = self.current_state
-        return av.VideoFrame.from_ndarray(img, format="bgr24")
-
 # --- 4. THE UI & SCREEN SHARING ---
 def run_app():
     st.title("🤖 Lumina AI: Empathetic Assistive Technology")
@@ -69,7 +5,7 @@ def run_app():
     # Sidebar for Demo Controls
     with st.sidebar:
         st.header("📋 Demo Controls")
-        st.info("Use 'Screen Share' to let Lumina monitor your learning material.")
+        st.info("Step 1: Start 'Student Feed' (Camera)\nStep 2: Start 'Learning Material' (Choose Screen Share)")
         if st.button("Reset Scaffolding"):
             st.session_state.frustrated_since = None
             st.rerun()
@@ -92,14 +28,22 @@ def run_app():
 
     with col2:
         st.subheader("💻 Learning Material")
-        st.write("Share your textbook or slides below:")
-        # THIS ENABLES SCREEN SHARING
+        st.write("Click 'Start' and select **'Window'** or **'Tab'** to share homework:")
+        
+        # SCREEN SHARING CONFIGURATION
         webrtc_streamer(
             key="screen-share",
             mode=WebRtcMode.SENDRECV,
             rtc_configuration=RTC_CONFIG,
-            video_receiver_size=1, # Minimal size to save memory
-            media_stream_constraints={"video": {"displaySurface": "browser"}, "audio": False},
+            # This constraint tells the browser to share the screen/display instead of webcam
+            video_receiver_size=1,
+            media_stream_constraints={
+                "video": {
+                    "displaySurface": "monitor", # Options: 'monitor', 'window', 'browser'
+                    "cursor": "always"
+                },
+                "audio": False
+            },
         )
 
     with col3:
@@ -114,18 +58,10 @@ def run_app():
             
             if elapsed >= 5:
                 st.error("⚠️ Cognitive Overload Detected")
-                st.info("**Lumina AI Translation:**\n'This section discusses how complex systems interact.'")
-                st.caption("Status: Real-time text simplification active.")
+                st.info("**Lumina AI Simplification:**\n'The homework is asking you to break this complex problem into 3 smaller parts. Let's start with Part 1: Definition.'")
             else:
-                st.warning(f"Analyzing persistence... {int(elapsed)}s")
+                st.warning(f"Monitoring Frustration... {int(elapsed)}s / 5s")
         else:
             st.session_state.frustrated_since = None
             st.success(f"State: {current_emo}")
-            st.write("Standard difficulty material is currently displayed.")
-
-# --- 5. FOOTER ---
-st.markdown("---")
-st.caption("Developed by Puteri Aisyah Sofia | MSc Applied Computing | UTP")
-
-if __name__ == "__main__":
-    run_app()
+            st.write("Content: Standard Instructional Material")
