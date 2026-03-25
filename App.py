@@ -7,15 +7,16 @@ import time
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
 
 # --- 1. RESEARCH CONFIGURATION ---
+# Based on your FER model targeting specific learning-related emotions
 EMOTION_LABELS = {0: 'Frustrated', 1: 'Happy', 2: 'Neutral'}
-# Optimized STUN servers for reliable RTC in the Doha/Al-Khor region
 RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
 
-st.set_page_config(page_title="Lumina AI: Inclusive Education", layout="wide", page_icon="🤖")
+st.set_page_config(page_title="Lumina AI: Sharkord Edition", layout="wide", page_icon="🤖")
 
 # --- 2. ADAPTIVE MODEL LOADING ---
 @st.cache_resource
 def load_lumina_model():
+    """Memory-safe model loading for Cloud stability."""
     try:
         import tensorflow as tf
         if os.path.exists('model.h5'):
@@ -26,7 +27,7 @@ def load_lumina_model():
 
 model = load_lumina_model()
 
-# --- 3. PERCEPTION MODULE (Student Face Tracking) ---
+# --- 3. PERCEPTION MODULE (Sharkord-Style Face Tracking) ---
 class LuminaPerception:
     def __init__(self):
         self.history = []
@@ -46,24 +47,24 @@ class LuminaPerception:
                 preds = model.predict(roi, verbose=0)[0]
                 detected = EMOTION_LABELS[np.argmax(preds)]
 
-            # Temporal Smoothing
+            # Temporal Smoothing to prevent flickering during the demo
             self.history.append(detected)
             if len(self.history) > 15: self.history.pop(0)
             st.session_state['emotion'] = max(set(self.history), key=self.history.count)
             
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# --- 4. THE UI & SCREEN SHARING ---
+# --- 4. UI & SHARKORD SCREEN SHARING ---
 def run():
-    st.title("🤖 Lumina AI: Empathetic Screen Monitor")
+    st.title("🤖 Lumina AI: Collaborative Assistive System")
 
     if 'emotion' not in st.session_state: st.session_state['emotion'] = "Neutral"
 
-    # Layout: Two Columns for the Demo
-    col1, col2 = st.columns([1, 1])
+    # Layout: Dual-Feed Collaborative View
+    col1, col2 = st.columns([1, 1.5])
 
     with col1:
-        st.subheader("👤 Student Feed")
+        st.subheader("👤 Student Feed (Affective)")
         webrtc_streamer(
             key="cam",
             mode=WebRtcMode.SENDRECV,
@@ -72,58 +73,61 @@ def run():
             media_stream_constraints={"video": True, "audio": False}
         )
         
-        # Scaffolding Box
+        # Scaffolding Response Box
         st.write("---")
         st.subheader("💡 Lumina Scaffolding")
         emo = st.session_state['emotion']
         if emo == "Frustrated":
-            st.error("⚠️ Cognitive Overload Detected")
-            st.info("**Lumina AI Simplification:**\n'This section looks complex. Focus on the main keywords highlighted on your screen!'")
+            st.error("⚠️ Cognitive Strain Detected")
+            st.info("**Lumina AI Translation:**\n'I notice the current problem might be difficult. Let's simplify the instructions on your shared screen.'")
         else:
-            st.success(f"State: {emo}")
-            st.write("System is monitoring your learning progress.")
+            st.success(f"Student State: {emo}")
+            st.write("Student is managing the instructional load well.")
 
     with col2:
-        st.subheader("📺 Shared Homework Screen")
-        st.caption("Click 'Start' and select **'Window'** or **'Tab'** to share your homework:")
+        st.subheader("💻 Shared Screen (Homework)")
+        st.caption("Click 'Start' and choose 'Window' or 'Tab' to show Lumina your work:")
         
-        # TEAMS-STYLE SCREEN SHARING LOGIC
-        # This implementation follows the 'tonghohin' approach for lightweight sharing
+        # Sharkord-Style Real-Time Screen Capture Logic
         webrtc_streamer(
-            key="screen-share",
+            key="screen-share-monitor",
             mode=WebRtcMode.SENDRECV,
             rtc_configuration=RTC_CONFIG,
-            # Constraints below trigger the browser-level screen picker
+            # Constraints trigger the 'Teams-style' screen selector
             media_stream_constraints={
                 "video": {
-                    "displaySurface": "monitor", # Options: 'monitor', 'window', 'browser'
-                    "cursor": "always"
+                    "displaySurface": "browser", # Forces browser tab/window selection
+                    "width": 1280,
+                    "height": 720
                 },
                 "audio": False
             },
             async_processing=True
         )
 
-    # --- 5. THE DYNAMIC MASCOT ---
+    # --- 5. THE DYNAMIC MASCOT & FOOTER ---
     st.divider()
     m_col1, m_col2 = st.columns([1, 4])
     
     with m_col1:
-        # Mascot icon changes based on state
+        # Mascot state changes based on Affective Module output
         if emo == "Frustrated":
-            st.image("https://cdn-icons-png.flaticon.com/512/4712/4712027.png", width=80)
+            st.image("https://cdn-icons-png.flaticon.com/512/4712/4712027.png", width=100)
+            st.markdown("**Worried Mascot**")
         elif emo == "Happy":
-            st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=80)
+            st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=100)
+            st.markdown("**Cheering Mascot**")
         else:
-            st.image("https://cdn-icons-png.flaticon.com/512/4712/4712010.png", width=80)
+            st.image("https://cdn-icons-png.flaticon.com/512/4712/4712010.png", width=100)
+            st.markdown("**Ready Mascot**")
 
     with m_col2:
         if emo == "Frustrated":
-            st.info(f"🤖 **Lumina:** Hey! I notice you might be struggling with the material. I'm watching your shared screen and I'm ready to help simplify the hard parts!")
+            st.info(f"🤖 **Lumina:** Hey! I notice you're struggling with the content on your screen. Don't worry, I'm here to help you break it down into smaller steps!")
         else:
-            st.write(f"🤖 **Lumina:** I can see your homework screen! You're doing great, keep focusing!")
+            st.write(f"🤖 **Lumina:** I'm connected to your shared screen! You're doing a great job staying focused.")
         
-        st.caption("Developed by Puteri Aisyah Sofia | MSc Applied Computing | UTP | Doha, Qatar")
+        st.caption(f"Puteri Aisyah Sofia | Student ID: 25014776 | MSc Applied Computing | UTP")
 
 if __name__ == "__main__":
     run()
