@@ -8,11 +8,12 @@ from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
 
 # --- 1. RESEARCH CONFIGURATION ---
 EMOTION_LABELS = {0: 'Frustrated', 1: 'Happy', 2: 'Neutral'}
+# Optimized STUN servers for reliable RTC in the Doha/Al-Khor region
 RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
 
-st.set_page_config(page_title="Lumina AI: Collaborative Education", layout="wide", page_icon="🤖")
+st.set_page_config(page_title="Lumina AI: Inclusive Education", layout="wide", page_icon="🤖")
 
-# --- 2. MODEL LOADING ---
+# --- 2. ADAPTIVE MODEL LOADING ---
 @st.cache_resource
 def load_lumina_model():
     try:
@@ -25,7 +26,7 @@ def load_lumina_model():
 
 model = load_lumina_model()
 
-# --- 3. PERCEPTION MODULE (Affective Logic) ---
+# --- 3. PERCEPTION MODULE (Student Face Tracking) ---
 class LuminaPerception:
     def __init__(self):
         self.history = []
@@ -45,29 +46,24 @@ class LuminaPerception:
                 preds = model.predict(roi, verbose=0)[0]
                 detected = EMOTION_LABELS[np.argmax(preds)]
 
+            # Temporal Smoothing
             self.history.append(detected)
             if len(self.history) > 15: self.history.pop(0)
-            final_state = max(set(self.history), key=self.history.count)
-            st.session_state['emotion'] = final_state
+            st.session_state['emotion'] = max(set(self.history), key=self.history.count)
             
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# --- 4. THE UI ---
+# --- 4. THE UI & SCREEN SHARING ---
 def run():
-    st.title("🤖 Lumina AI x MiroTalk: Collaborative Learning")
+    st.title("🤖 Lumina AI: Empathetic Screen Monitor")
 
     if 'emotion' not in st.session_state: st.session_state['emotion'] = "Neutral"
 
-    # Sidebar for Room Management
-    with st.sidebar:
-        st.header("🔑 Classroom Access")
-        room_id = st.text_input("Enter Room Name:", "Lumina-IGCSE-Session")
-        st.info("Tip: Share this room name with your tutor to start a joint session.")
-
-    col1, col2 = st.columns([1, 2]) # 1/3 for AI Tracking, 2/3 for MiroTalk
+    # Layout: Two Columns for the Demo
+    col1, col2 = st.columns([1, 1])
 
     with col1:
-        st.subheader("👤 Student Affective Feed")
+        st.subheader("👤 Student Feed")
         webrtc_streamer(
             key="cam",
             mode=WebRtcMode.SENDRECV,
@@ -76,30 +72,44 @@ def run():
             media_stream_constraints={"video": True, "audio": False}
         )
         
-        # Scaffolding Box below the camera
+        # Scaffolding Box
         st.write("---")
         st.subheader("💡 Lumina Scaffolding")
         emo = st.session_state['emotion']
         if emo == "Frustrated":
             st.error("⚠️ Cognitive Overload Detected")
-            st.markdown("**Lumina Suggestion:**\n'I see you are struggling with the screen content. Try looking at the IGCSE summary I prepared in your notes.'")
+            st.info("**Lumina AI Simplification:**\n'This section looks complex. Focus on the main keywords highlighted on your screen!'")
         else:
             st.success(f"State: {emo}")
-            st.write("Monitoring screen activity via MiroTalk...")
+            st.write("System is monitoring your learning progress.")
 
     with col2:
-        st.subheader("📺 MiroTalk Collaborative Space")
-        # EMBEDDING MIROTALK BRO (Teams-Style Interface)
-        # This allows Screen Sharing, Video Chat, and Chat within the Lumina UI
-        mirotalk_url = f"https://p2p.mirotalk.com/join/{room_id}"
+        st.subheader("📺 Shared Homework Screen")
+        st.caption("Click 'Start' and select **'Window'** or **'Tab'** to share your homework:")
         
-        st.components.v1.iframe(mirotalk_url, height=700, scrolling=True)
+        # TEAMS-STYLE SCREEN SHARING LOGIC
+        # This implementation follows the 'tonghohin' approach for lightweight sharing
+        webrtc_streamer(
+            key="screen-share",
+            mode=WebRtcMode.SENDRECV,
+            rtc_configuration=RTC_CONFIG,
+            # Constraints below trigger the browser-level screen picker
+            media_stream_constraints={
+                "video": {
+                    "displaySurface": "monitor", # Options: 'monitor', 'window', 'browser'
+                    "cursor": "always"
+                },
+                "audio": False
+            },
+            async_processing=True
+        )
 
     # --- 5. THE DYNAMIC MASCOT ---
     st.divider()
     m_col1, m_col2 = st.columns([1, 4])
     
     with m_col1:
+        # Mascot icon changes based on state
         if emo == "Frustrated":
             st.image("https://cdn-icons-png.flaticon.com/512/4712/4712027.png", width=80)
         elif emo == "Happy":
@@ -109,11 +119,11 @@ def run():
 
     with m_col2:
         if emo == "Frustrated":
-            st.info(f"🤖 **Lumina:** Hey Puteri, don't let the homework stress you out! Use the MiroTalk Screen Share button below to show me what's hard.")
+            st.info(f"🤖 **Lumina:** Hey! I notice you might be struggling with the material. I'm watching your shared screen and I'm ready to help simplify the hard parts!")
         else:
-            st.write(f"🤖 **Lumina:** I'm connected to your MiroTalk room. You're doing great!")
+            st.write(f"🤖 **Lumina:** I can see your homework screen! You're doing great, keep focusing!")
         
-        st.caption("Puteri Aisyah Sofia | MSc Applied Computing | UTP | Doha, Qatar")
+        st.caption("Developed by Puteri Aisyah Sofia | MSc Applied Computing | UTP | Doha, Qatar")
 
 if __name__ == "__main__":
     run()
