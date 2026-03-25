@@ -7,9 +7,20 @@ import time
 import os
 import av
 from PIL import Image
+import pytesseract
 
 # ---------------- CONFIG ----------------
-EMOTION_LABELS = {0: 'Happy', 1: 'Frustrated', 2: 'Neutral'}
+# Use REAL model labels first
+RAW_LABELS = {
+    0: 'Angry',
+    1: 'Disgust',
+    2: 'Fear',
+    3: 'Happy',
+    4: 'Sad',
+    5: 'Surprise',
+    6: 'Neutral'
+}
+
 RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
 
 st.set_page_config(page_title="Lumina AI", layout="wide")
@@ -21,7 +32,8 @@ def load_model():
         if os.path.exists('model.h5'):
             return tf.keras.models.load_model('model.h5')
         return None
-    except:
+    except Exception as e:
+        st.error(f"Model load error: {e}")
         return None
 
 model = load_model()
@@ -31,26 +43,39 @@ class LuminaPerception:
     def __init__(self):
         self.history = []
         self.state = "Neutral"
+        self.face = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
     def recv(self, frame):
         img = frame.to_ndarray(format="bgr24")
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        face = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        faces = face.detectMultiScale(gray, 1.3, 5)
+        faces = self.face.detectMultiScale(gray, 1.3, 5)
 
         for (x,y,w,h) in faces:
             roi = cv2.resize(gray[y:y+h, x:x+w], (48,48)) / 255.0
             roi = roi.reshape(1,48,48,1)
 
             if model is not None:
-                pred = model.predict(roi, verbose=0)
-                detected = EMOTION_LABELS[np.argmax(pred)]
+                preds = model.predict(roi, verbose=0)[0]
+                confidence = np.max(preds)
+                raw_emotion = RAW_LABELS[np.argmax(preds)]
+
+                # Confidence filter
+                if confidence < 0.6:
+                    detected = "Neutral"
+                else:
+                    # Map to YOUR system
+                    if raw_emotion in ['Angry', 'Sad', 'Fear']:
+                        detected = "Frustrated"
+                    elif raw_emotion == 'Happy':
+                        detected = "Happy"
+                    else:
+                        detected = "Neutral"
             else:
-                detected = "Frustrated"
+                detected = "Neutral"
 
             self.history.append(detected)
-            if len(self.history) > 10:
+            if len(self.history) > 15:
                 self.history.pop(0)
 
             self.state = max(set(self.history), key=self.history.count)
@@ -62,7 +87,6 @@ class LuminaPerception:
 
 # ---------------- SIMPLIFIER ----------------
 def simplify_text(text):
-    """Simple rule-based placeholder (replace later with LLM/API)"""
     if len(text.strip()) == 0:
         return "Upload screen to simplify"
 
@@ -100,8 +124,6 @@ def run():
             img = Image.open(uploaded)
             st.image(img, caption="Student Screen")
 
-            # OCR
-            import pytesseract
             text = pytesseract.image_to_string(img)
 
             if st.session_state['emotion'] == "Frustrated":
@@ -109,7 +131,7 @@ def run():
                 simplified = simplify_text(text)
                 st.write(simplified)
             else:
-                st.info("Waiting for difficulty signal...")
+                st.info("No frustration detected yet...")
 
     # -------- MASCOT --------
     st.markdown("---")
