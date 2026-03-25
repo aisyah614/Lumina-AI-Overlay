@@ -25,7 +25,7 @@ def load_lumina_model():
 
 model = load_lumina_model()
 
-# --- 3. PERCEPTION MODULE (Student State) ---
+# --- 3. PERCEPTION MODULE (Affective Intelligence) ---
 class LuminaPerception:
     def __init__(self):
         self.history = []
@@ -51,49 +51,63 @@ class LuminaPerception:
             
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# --- 4. KEEP IT SIMPLE AI INTEGRATION ---
+# --- 4. KEEP IT SIMPLE AI: BULLET-POINT TRANSFORMER ---
 def text_simplification_tool():
-    st.subheader("📝 Text Simplification & Scaffolding")
-    input_text = st.text_area("Paste complex IGCSE content here:", height=150, placeholder="Enter text to simplify...")
+    st.subheader("📝 IGCSE Scaffolding Tool")
+    input_text = st.text_area("Paste complex textbook paragraphs here:", height=150, 
+                              placeholder="e.g., 'The mitochondria is the powerhouse of the cell...'")
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        level = st.selectbox("Simplify to:", ["Beginner", "Intermediate", "Advanced"])
+        level = st.selectbox("Complexity Level:", ["Super Simple", "Core Points Only", "Detailed Summary"])
     with col2:
-        bionic = st.checkbox("Bionic Reading")
+        bionic = st.checkbox("Enable Bionic Reading")
     with col3:
-        font_size = st.slider("Text Size", 12, 48, 20)
+        font_size = st.slider("Visual Size", 14, 40, 22)
 
-    if st.button("✨ Simplify for me"):
+    if st.button("✨ Simplify into Bullet Points"):
         if input_text:
-            # Simulation of Keep-It-Simple logic
-            simplified = f"[{level} Level Adaptation]: {input_text}"
+            # 1. Break into points (Simulating LLM simplification)
+            raw_points = [p.strip() for p in input_text.split('.') if len(p.strip()) > 5]
             
-            if bionic:
-                simplified = " ".join([f"**{word[:len(word)//2+1]}**{word[len(word)//2+1:]}" for word in simplified.split()])
-            
-            # FIXED: Indented properly and fixed the parameter name
+            # 2. Logic to reduce wordiness (Scaffolding Logic)
+            bullet_points = []
+            for point in raw_points:
+                words = point.split()
+                # Limit each point to key info (approx first 60% of words) to avoid word-for-word copy
+                short_point = " ".join(words[:int(len(words)*0.7)])
+                bullet_points.append(f"• {short_point}...")
+
+            # 3. Apply Bionic Reading to bullet points
+            final_html = ""
+            for bp in bullet_points:
+                if bionic:
+                    bp = " ".join([f"<b>{word[:len(word)//2+1]}</b>{word[len(word)//2+1:]}" for word in bp.split()])
+                final_html += f"<p style='margin-bottom: 10px;'>{bp}</p>"
+
+            # 4. Render the UI
             st.markdown(
                 f"""
-                <div style="font-size: {font_size}px; background: white; padding: 25px; 
-                border-radius: 12px; color: black; border-left: 8px solid #4A90E2; 
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px;">
-                    {simplified}
+                <div style="font-size: {font_size}px; background: #f9f9f9; padding: 25px; 
+                border-radius: 12px; color: #333; border-left: 10px solid #4A90E2; 
+                line-height: 1.6; font-family: 'Helvetica', sans-serif;">
+                    <h4 style="color: #4A90E2; margin-top: 0;">🤖 Lumina Simplified View:</h4>
+                    {final_html}
                 </div>
                 """, 
                 unsafe_allow_html=True
             )
-            st.download_button("📥 Download Simplified PDF", simplified, file_name="lumina_notes.txt")
+            st.download_button("📥 Save Simplified Notes", "\n".join(bullet_points), file_name="igcse_notes.txt")
         else:
-            st.warning("Please paste some text first!")
+            st.warning("Please enter text for Lumina to simplify.")
 
-# --- 5. REMOTE CONTROL COMPONENT ---
+# --- 5. REMOTE DESKTOP COMPONENT ---
 def remote_control_interface():
     js_code = """
     <div style="background: #121212; padding: 10px; border-radius: 12px; border: 1px solid #333;">
         <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <button id="share" style="background: #27ae60; border: none; padding: 8px 15px; border-radius: 5px; color: white; cursor: pointer; font-weight: bold;">🌐 Start Sharing</button>
-            <button id="stop" style="background: #c0392b; border: none; padding: 8px 15px; border-radius: 5px; color: white; cursor: pointer; display: none; font-weight: bold;">🛑 Stop</button>
+            <button id="share" style="background: #27ae60; border: none; padding: 10px 20px; border-radius: 5px; color: white; cursor: pointer; font-weight: bold;">🌐 Start Sharing</button>
+            <button id="stop" style="background: #c0392b; border: none; padding: 10px 20px; border-radius: 5px; color: white; cursor: pointer; display: none; font-weight: bold;">🛑 Stop</button>
         </div>
         <video id="remoteVideo" autoplay playsinline style="width: 100%; height: 350px; background: #000; border-radius: 8px;"></video>
     </div>
@@ -118,7 +132,7 @@ def remote_control_interface():
     """
     components.html(js_code, height=450)
 
-# --- 6. THE MAIN UI ---
+# --- 6. MAIN UI ---
 def run():
     st.title("🤖 Lumina AI x Keep-It-Simple: Inclusive Learning")
     if 'emotion' not in st.session_state: st.session_state['emotion'] = "Neutral"
@@ -133,12 +147,12 @@ def run():
         emo = st.session_state['emotion']
         if emo == "Frustrated":
             st.error("⚠️ Cognitive Overload Detected")
-            st.info("🤖 **Lumina Tip:** Your face shows a bit of frustration. Use the **Text Scaffolding** tab to simplify your homework text!")
+            st.info("🤖 **Lumina:** You look a bit stuck. I've activated the **Scaffolding Tool** on the right. Paste the paragraph there and I'll break it down!")
         else:
             st.success(f"State: {emo}")
 
     with right_panel:
-        tab1, tab2 = st.tabs(["🖥️ Remote Desktop", "📚 Text Scaffolding"])
+        tab1, tab2 = st.tabs(["🖥️ Desktop View", "📚 Text Scaffolding"])
         with tab1:
             remote_control_interface()
         with tab2:
@@ -148,15 +162,14 @@ def run():
     st.divider()
     m1, m2 = st.columns([1, 5])
     with m1:
-        # Dynamic mascot icon based on emotion
         icon_code = "4712027" if emo == "Frustrated" else ("4712035" if emo == "Happy" else "4712010")
         st.image(f"https://cdn-icons-png.flaticon.com/512/4712/{icon_code}.png", width=100)
     with m2:
         if emo == "Frustrated":
-            st.write("🤖 **Lumina:** I can see that the material is a bit tough. Don't worry, I'm here to simplify it!")
+            st.write("🤖 **Lumina:** I'm here to simplify the hard parts. Look at the bullet points I prepared!")
         else:
-            st.write("🤖 **Lumina:** You're doing a great job staying focused. I'm monitoring your shared screen now.")
-        st.caption("Puteri Aisyah Sofia | Student ID: 25014776 | MSc Applied Computing | UTP | Doha, Qatar")
+            st.write("🤖 **Lumina:** You're doing great! Keep sharing your screen so I can monitor your progress.")
+        st.caption("Puteri Aisyah Sofia | MSc Applied Computing | UTP | Doha, Qatar")
 
 if __name__ == "__main__":
     run()
