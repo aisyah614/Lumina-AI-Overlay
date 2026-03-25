@@ -12,7 +12,7 @@ RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:
 
 st.set_page_config(page_title="Lumina AI: Inclusive Education", layout="wide", page_icon="🤖")
 
-# --- 2. MODEL LOADING (Affective Module) ---
+# --- 2. MODEL LOADING ---
 @st.cache_resource
 def load_lumina_model():
     try:
@@ -62,37 +62,40 @@ def text_simplification_tool():
     with col2:
         bionic = st.checkbox("Bionic Reading")
     with col3:
-        font_size = st.slider("Text Size", 12, 32, 18)
+        font_size = st.slider("Text Size", 12, 48, 20)
 
     if st.button("✨ Simplify for me"):
         if input_text:
-            # Placeholder for the Keep-It-Simple LLM logic
-            simplified = f"Simplified to {level} level: {input_text[:100]}... [Simplified Content]"
+            # Simulation of Keep-It-Simple logic
+            simplified = f"[{level} Level Adaptation]: {input_text}"
             
-            # Applying Bionic Reading effect (Visual Accessibility)
             if bionic:
                 simplified = " ".join([f"**{word[:len(word)//2+1]}**{word[len(word)//2+1:]}" for word in simplified.split()])
             
-           # Change 'unsafe_allow_all_html' to 'unsafe_allow_html'
-st.markdown(
-    f"""
-    <div style="font-size: {font_size}px; background: white; padding: 20px; 
-    border-radius: 10px; color: black; border-left: 5px solid #4A90E2;">
-        {simplified}
-    </div>
-    """, 
-    unsafe_allow_html=True
-)
+            # FIXED: Indented properly and fixed the parameter name
+            st.markdown(
+                f"""
+                <div style="font-size: {font_size}px; background: white; padding: 25px; 
+                border-radius: 12px; color: black; border-left: 8px solid #4A90E2; 
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px;">
+                    {simplified}
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+            st.download_button("📥 Download Simplified PDF", simplified, file_name="lumina_notes.txt")
+        else:
+            st.warning("Please paste some text first!")
 
 # --- 5. REMOTE CONTROL COMPONENT ---
 def remote_control_interface():
     js_code = """
     <div style="background: #121212; padding: 10px; border-radius: 12px; border: 1px solid #333;">
         <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <button id="share" style="background: #27ae60; border: none; padding: 8px 15px; border-radius: 5px; color: white; cursor: pointer;">Start Desktop View</button>
-            <button id="stop" style="background: #c0392b; border: none; padding: 8px 15px; border-radius: 5px; color: white; cursor: pointer; display: none;">Stop</button>
+            <button id="share" style="background: #27ae60; border: none; padding: 8px 15px; border-radius: 5px; color: white; cursor: pointer; font-weight: bold;">🌐 Start Sharing</button>
+            <button id="stop" style="background: #c0392b; border: none; padding: 8px 15px; border-radius: 5px; color: white; cursor: pointer; display: none; font-weight: bold;">🛑 Stop</button>
         </div>
-        <video id="remoteVideo" autoplay playsinline style="width: 100%; height: 300px; background: #000; border-radius: 5px;"></video>
+        <video id="remoteVideo" autoplay playsinline style="width: 100%; height: 350px; background: #000; border-radius: 8px;"></video>
     </div>
     <script>
     const shareBtn = document.getElementById('share');
@@ -100,18 +103,20 @@ def remote_control_interface():
     const video = document.getElementById('remoteVideo');
     let stream = null;
     shareBtn.onclick = async () => {
-        stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        video.srcObject = stream;
-        shareBtn.style.display='none'; stopBtn.style.display='inline';
+        try {
+            stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            video.srcObject = stream;
+            shareBtn.style.display='none'; stopBtn.style.display='inline';
+        } catch (err) { console.error(err); }
     };
     stopBtn.onclick = () => {
-        stream.getTracks().forEach(t => t.stop());
+        if(stream) { stream.getTracks().forEach(t => t.stop()); }
         video.srcObject = null;
         shareBtn.style.display='inline'; stopBtn.style.display='none';
     };
     </script>
     """
-    components.html(js_code, height=400)
+    components.html(js_code, height=450)
 
 # --- 6. THE MAIN UI ---
 def run():
@@ -128,12 +133,12 @@ def run():
         emo = st.session_state['emotion']
         if emo == "Frustrated":
             st.error("⚠️ Cognitive Overload Detected")
-            st.warning("🤖 **Lumina Tip:** Use the 'Keep It Simple' tool on the right to break down this complex text!")
+            st.info("🤖 **Lumina Tip:** Your face shows a bit of frustration. Use the **Text Scaffolding** tab to simplify your homework text!")
         else:
             st.success(f"State: {emo}")
 
     with right_panel:
-        tab1, tab2 = st.tabs(["🖥️ Desktop Control", "📚 Text Scaffolding"])
+        tab1, tab2 = st.tabs(["🖥️ Remote Desktop", "📚 Text Scaffolding"])
         with tab1:
             remote_control_interface()
         with tab2:
@@ -143,11 +148,15 @@ def run():
     st.divider()
     m1, m2 = st.columns([1, 5])
     with m1:
-        icon = "4712027" if emo == "Frustrated" else ("4712035" if emo == "Happy" else "4712010")
-        st.image(f"https://cdn-icons-png.flaticon.com/512/4712/{icon}.png", width=100)
+        # Dynamic mascot icon based on emotion
+        icon_code = "4712027" if emo == "Frustrated" else ("4712035" if emo == "Happy" else "4712010")
+        st.image(f"https://cdn-icons-png.flaticon.com/512/4712/{icon_code}.png", width=100)
     with m2:
-        st.write(f"🤖 **Lumina:** {'Let me simplify that for you!' if emo == 'Frustrated' else 'Everything is looking good!'} You are doing great today.")
-        st.caption("Puteri Aisyah Sofia | MSc Applied Computing | UTP | Doha, Qatar")
+        if emo == "Frustrated":
+            st.write("🤖 **Lumina:** I can see that the material is a bit tough. Don't worry, I'm here to simplify it!")
+        else:
+            st.write("🤖 **Lumina:** You're doing a great job staying focused. I'm monitoring your shared screen now.")
+        st.caption("Puteri Aisyah Sofia | Student ID: 25014776 | MSc Applied Computing | UTP | Doha, Qatar")
 
 if __name__ == "__main__":
     run()
