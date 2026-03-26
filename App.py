@@ -3,80 +3,80 @@ from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
 import streamlit.components.v1 as components
 from model_predict import VideoProcessor
 
+# --- 1. AESTHETIC CONFIGURATION ---
 st.set_page_config(page_title="Lumina AI | Study Sanctuary", layout="wide")
 
-# --- ANIME CLASSROOM STYLING ---
-def apply_classroom_theme():
-    # Replace the URL below with your actual background image link if you host it elsewhere
-    bg_image = "https://raw.githubusercontent.com/AisyahSofia/Lumina-AI/main/classroom_bg.jpg" 
+def apply_custom_styles():
+    # Link to your Anime Classroom background
+    bg_url = "https://raw.githubusercontent.com/AisyahSofia/Lumina-AI/main/classroom_bg.jpg"
     
     st.markdown(f"""
     <style>
-    /* Background Image with Overlay */
+    /* Background setup */
     .stApp {{
-        background-image: linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.2)), url("{bg_image}");
+        background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), url("{bg_url}");
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
     }}
-    
-    /* Glassmorphism Cards */
+
+    /* Glass Container Effect */
     [data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {{
-        background: rgba(255, 255, 255, 0.75);
-        backdrop-filter: blur(8px);
-        border-radius: 20px;
-        padding: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-radius: 25px;
+        padding: 30px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
     }}
 
-    /* Pop-out Pink Buttons */
+    /* Pretty Pink Buttons */
     .stButton>button {{
-        background: linear-gradient(45deg, #FF69B4, #DA70D6) !important;
+        background: linear-gradient(90deg, #FF69B4, #DA70D6) !important;
         color: white !important;
         border: none !important;
-        border-radius: 15px !important;
-        padding: 12px 24px !important;
+        border-radius: 20px !important;
+        padding: 12px 30px !important;
         font-weight: bold !important;
-        box-shadow: 0 4px 15px rgba(218, 112, 214, 0.4);
+        transition: 0.3s ease;
+    }}
+    .stButton>button:hover {{
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
     }}
 
-    /* Tabs Styling */
-    .stTabs [data-baseweb="tab-list"] {{ background-color: transparent; }}
-    .stTabs [data-baseweb="tab"] {{
-        background-color: rgba(255, 255, 255, 0.5);
-        border-radius: 10px 10px 0 0;
-        margin-right: 5px;
-        color: #8A2BE2 !important;
+    /* Titles */
+    h1, h2, h3 {{
+        color: #4B0082 !important;
+        font-family: 'Helvetica Neue', sans-serif;
+        text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
     }}
-    .stTabs [aria-selected="true"] {{
-        background-color: #DA70D6 !important;
-        color: white !important;
-    }}
-
-    h1, h2 {{ color: #4B0082 !important; text-shadow: 1px 1px 2px white; }}
     </style>
     """, unsafe_allow_html=True)
 
-apply_classroom_theme()
+apply_custom_styles()
 
-# --- APP LOGIC ---
+# --- 2. FIXED RTC CONFIG ---
 RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
-if 'emo' not in st.session_state: st.session_state['emo'] = "Neutral"
 
+if 'emo' not in st.session_state: 
+    st.session_state['emo'] = "Neutral"
+
+# --- 3. UI LAYOUT ---
 st.title("☀️ Lumina AI: Your Learning Sanctuary")
+st.caption("Researcher: Puteri Aisyah Sofia | MSc Applied Computing | UTP")
 
-l_col, r_col = st.columns([1, 2.2])
+col_cam, col_main = st.columns([1, 2.2])
 
-with l_col:
+with col_cam:
     st.subheader("📸 Focus Tracker")
-    # Camera Stream
+    # Fixed the constraints and RTC config braces here:
     ctx = webrtc_streamer(
-        key="anime-study-cam",
+        key="lumina-v16-final",
         mode=WebRtcMode.SENDRECV,
         video_processor_factory=VideoProcessor,
         rtc_configuration=RTC_CONFIG,
-        media_stream_constraints={{"video": True, "audio": False}},
+        media_stream_constraints={"video": True, "audio": False},
         async_processing=True
     )
     
@@ -85,24 +85,26 @@ with l_col:
     
     status = st.session_state['emo']
     
-    # Status Indicator Card
-    if status == "Frustrated":
-        st.markdown(f'<div style="background:#FFB6C1; padding:10px; border-radius:15px; text-align:center; color:#8B0000; font-weight:bold;">Status: {status} (Help is on the way!)</div>', unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div style="background:#E6E6FA; padding:10px; border-radius:15px; text-align:center; color:#4B0082;">Status: {status}</div>', unsafe_allow_html=True)
+    # Dynamic Status Pill
+    status_color = "#FFB6C1" if status == "Frustrated" else "#E0FFFF"
+    st.markdown(f"""
+        <div style="background:{status_color}; padding:15px; border-radius:15px; text-align:center; font-weight:bold; color:#4B0082;">
+            Current State: {status}
+        </div>
+    """, unsafe_allow_html=True)
 
-with r_col:
+with col_main:
     tab1, tab2 = st.tabs(["🖥️ Study Desktop", "💡 Lumina Notes"])
     
     with tab1:
-        # FIXED DESKTOP SHARE WITH STOP BUTTON
+        # Desktop Share with Working STOP button
         share_js = """
-        <div style="background: rgba(255,255,255,0.6); padding: 15px; border-radius: 15px;">
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <button id="s" style="flex: 1; padding: 12px; background: #9370DB; color: white; border: none; border-radius: 10px; cursor: pointer;">🌐 Share Screen</button>
-                <button id="e" style="flex: 1; padding: 12px; background: #FF6347; color: white; border: none; border-radius: 10px; cursor: pointer; display: none;">🛑 Stop</button>
+        <div style="background: rgba(255,255,255,0.7); padding: 20px; border-radius: 20px; border: 3px dashed #DA70D6;">
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button id="s" style="flex: 2; padding: 15px; background: #9370DB; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold;">🌐 Share Desktop</button>
+                <button id="e" style="flex: 1; padding: 15px; background: #FF4500; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; display: none;">🛑 Stop</button>
             </div>
-            <video id="v" autoplay playsinline style="width: 100%; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"></video>
+            <video id="v" autoplay playsinline style="width: 100%; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);"></video>
         </div>
         <script>
         const btnS = document.getElementById('s'); const btnE = document.getElementById('e');
@@ -120,23 +122,23 @@ with r_col:
         btnE.onclick = stop;
         </script>
         """
-        components.html(share_js, height=450)
+        components.html(share_js, height=480)
 
     with tab2:
         if status == "Frustrated":
             st.markdown("""
-            <div style="background: white; padding: 20px; border-radius: 15px; border-left: 10px solid #FF69B4;">
-                <h3 style="margin-top:0;">🌸 Lumina's Quick Guide</h3>
-                <p><b>Photosynthesis Simplified:</b></p>
+            <div style="background: white; padding: 25px; border-radius: 20px; border-left: 10px solid #FF1493; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                <h3 style="margin-top:0; color:#C71585;">🌸 Lumina's Sunbeam Help</h3>
+                <p style="font-size:1.1rem;">It's okay to feel stuck! Let's simplify this concept:</p>
                 <ul>
-                    <li>Plants need <b>Light</b> + <b>Water</b>.</li>
-                    <li>They use <b>Chlorophyll</b> to catch energy.</li>
-                    <li><b>Result:</b> They make starch (plant food).</li>
+                    <li><b>Photosynthesis:</b> Plants turn sunlight into "Energy Food".</li>
+                    <li><b>Chlorophyll:</b> The green chef inside the leaf. chef!</li>
+                    <li><b>Starch:</b> The food that is stored (Test with Iodine!).</li>
                 </ul>
             </div>
             """, unsafe_allow_html=True)
         else:
-            st.write("You're doing great! Keep focusing on your notes.")
+            st.info("The system is monitoring your study session. Scaffolding notes will appear here if you get frustrated!")
 
 st.sidebar.markdown("---")
-st.sidebar.caption("Puteri Aisyah Sofia | ID: 25014776")
+st.sidebar.caption("Lumina AI Framework | UTP | 2026")
