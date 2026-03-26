@@ -8,35 +8,6 @@ if 'is_frustrated' not in st.session_state:
     st.session_state.is_frustrated = False
 
 def apply_lumina_theme():
-    st.markdown("""
-    <style>
-    .stApp {
-        background: linear-gradient(135deg, #1a0a2e, #110e1a, #0d001a);
-        color: #ffffff;
-    }
-    
-    /* White Border Containers */
-    [data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {
-        background: rgba(255, 255, 255, 0.07);
-        backdrop-filter: blur(15px);
-        border-radius: 20px;
-        padding: 30px;
-        border: 2px solid #ffffff; 
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-        margin-bottom: 20px;
-    }
-
-    /* Primary Action Buttons */
-    .stButton>button {
-        background: linear-gradient(45deg, #FF1493, #9400D3) !important;
-        color: white !important;
-        border: 2px solid #ffffff !important;
-        border-radius: 50px !important;
-        font-weight: bold !important;
-        transition: 0.3s ease;
-    }
-    </style>
-    """, unsafe_allow_html=True)
 
 apply_lumina_theme()
 
