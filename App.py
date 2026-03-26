@@ -7,6 +7,7 @@ import av
 import tensorflow as tf
 
 # --- 1. RESEARCH CONFIG ---
+# Mapping: 0=Neutral, 1=Happy, 2=Frustrated (Confusion)
 L_MAP = {0: 'Neutral', 1: 'Happy', 2: 'Frustrated'}
 RTC_CONFIG = {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
 
@@ -21,7 +22,7 @@ def load_lumina_engine():
 
 model = load_lumina_engine()
 
-# --- 3. PERCEPTION MODULE (Hyper-Sensitive Confusion Detection) ---
+# --- 3. PERCEPTION MODULE (Force-Update Enabled) ---
 class LuminaPerception:
     def __init__(self):
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -38,20 +39,20 @@ class LuminaPerception:
             if model:
                 roi = cv2.resize(img[y:y+h, x:x+w], (224, 224))
                 roi = np.asarray(roi, dtype=np.float32).reshape(1, 224, 224, 3)
-                roi = (roi / 127.5) - 1
+                roi = (roi / 127.5) - 1 # Normalization for .h5
                 preds = model.predict(roi, verbose=0)
                 idx = np.argmax(preds)
-                # Sensitivity set to 0.2 to catch "Confused" facial cues easily
-                if preds[0][idx] > 0.2: 
+                # Hyper-sensitive to catch confusion during textbook reading
+                if preds[0][idx] > 0.15: 
                     detected = L_MAP.get(idx, "Neutral")
         
         self.current_state = detected
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# --- 4. DESKTOP SHARING WITH STOP BUTTON ---
+# --- 4. DESKTOP MODULE ---
 def desktop_sharing_module():
     js_code = """
-    <div id="container" style="background: #111; padding: 15px; border-radius: 12px; border: 1px solid #444;">
+    <div style="background: #111; padding: 15px; border-radius: 12px; border: 1px solid #444;">
         <div style="display: flex; gap: 10px; margin-bottom: 10px;">
             <button id="startShare" style="background: #27ae60; border: none; padding: 12px; border-radius: 5px; color: white; cursor: pointer; flex: 1; font-weight: bold;">🌐 Share Study Desktop</button>
             <button id="stopShare" style="background: #c0392b; border: none; padding: 12px; border-radius: 5px; color: white; cursor: pointer; flex: 1; font-weight: bold; display: none;">🛑 Stop Sharing</button>
@@ -65,35 +66,28 @@ def desktop_sharing_module():
     let currentStream = null;
 
     startBtn.onclick = async () => {
-        try {
-            currentStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-            video.srcObject = currentStream;
-            startBtn.style.display = 'none';
-            stopBtn.style.display = 'block';
-            
-            currentStream.getVideoTracks()[0].onended = () => stopAction();
-        } catch (err) { console.error("Error: " + err); }
+        currentStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        video.srcObject = currentStream;
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'block';
     };
 
-    const stopAction = () => {
-        if (currentStream) {
-            currentStream.getTracks().forEach(track => track.stop());
-            video.srcObject = null;
-        }
+    stopBtn.onclick = () => {
+        if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); }
+        video.srcObject = null;
         startBtn.style.display = 'block';
         stopBtn.style.display = 'none';
     };
-
-    stopBtn.onclick = stopAction;
     </script>
     """
     components.html(js_code, height=450)
 
-# --- 5. MAIN SYSTEM INTERFACE ---
+# --- 5. MAIN INTERFACE ---
 def run():
     st.title("🤖 Lumina AI: Auto-Adaptive Assist")
     
-    if 'emo' not in st.session_state: st.session_state['emo'] = "Neutral"
+    # Persistent State Management
+    if 'last_emo' not in st.session_state: st.session_state['last_emo'] = "Neutral"
 
     col1, col2 = st.columns([1, 2.2])
 
@@ -101,29 +95,33 @@ def run():
         st.subheader("👤 Student Tracker")
         from streamlit_webrtc import webrtc_streamer
         ctx = webrtc_streamer(
-            key="lumina-v6",
+            key="lumina-v7", # New key to clear cache
             video_processor_factory=LuminaPerception,
             rtc_configuration=RTC_CONFIG,
             media_stream_constraints={"video": True, "audio": False}
         )
         
+        # SCRIPT BRIDGE: This pulls the state from the background thread
         if ctx.video_processor:
-            st.session_state['emo'] = ctx.video_processor.current_state
+            st.session_state['last_emo'] = ctx.video_processor.current_state
         
-        current = st.session_state['emo']
+        current = st.session_state['last_emo']
         
         st.divider()
         if current == "Frustrated":
-            st.error(f"🔍 Status: {current}")
-            st.warning("🤖 **Lumina Assist:** Scaffolding active.")
-        elif current == "Happy":
-            st.success(f"🔍 Status: {current}")
+            st.error(f"🔍 Current Status: {current}")
+            st.warning("🤖 Lumina: Confusion detected. Scaffolding triggered.")
         else:
-            st.info(f"🔍 Status: {current}")
+            st.info(f"🔍 Current Status: {current}")
+        
+        # Manual Trigger for Demo (If AI misses the look)
+        if st.button("Manual Trigger: I'm Confused"):
+            st.session_state['last_emo'] = "Frustrated"
+            st.rerun()
 
     with col2:
-        # Dynamic Tab Label (The "Ting" notification)
-        tab_label = "🔔 Simplified Notes" if current == "Frustrated" else "Simplified Notes"
+        # The Notification Tab Label
+        tab_label = "💡 Simplified Notes" if current == "Frustrated" else "Simplified Notes"
         t1, t2 = st.tabs(["Desktop View", tab_label])
         
         with t1:
@@ -131,23 +129,23 @@ def run():
             
         with t2:
             if current == "Frustrated":
-                st.subheader("🤖 Lumina: Plant Nutrition Simplified")
+                st.subheader("📖 Plant Nutrition: Key Takeaways")
                 st.markdown("""
-                * **The Goal:** To prove plants need light and chlorophyll for food (starch).
-                * **Chlorophyll:** The green pigment that traps sunlight.
-                * **The Process:**
-                    1. Boil leaf in ethanol to remove green color.
-                    2. Add Iodine solution to the leaf.
-                * **Results:**
-                    * **Blue/Black:** Starch is present (Light was available).
-                    * **Brown/Yellow:** No starch (No light or chlorophyll).
+                * **The Goal:** Does photosynthesis happen without chlorophyll?
+                * **The Variable:** Variegated leaves have green (chlorophyll) and white (no chlorophyll) parts.
+                * **The Test:**
+                    1. Boil in alcohol (removes green).
+                    2. Add Iodine.
+                * **The Proof:** * Green parts $\\rightarrow$ Blue/Black (Starch present).
+                    * White parts $\\rightarrow$ Brown (No starch).
+                * **Conclusion:** Chlorophyll is **required** for photosynthesis.
                 """)
-                st.toast("New simplified notes available!", icon="💡")
+                st.toast("Lumina has simplified the leaf experiment for you!", icon="🍃")
             else:
-                st.info("Lumina AI is monitoring. Look frustrated or highlight confusing text to trigger notes.")
+                st.write("Desktop sharing active. Notes will generate here once Lumina detects frustration.")
 
     st.divider()
-    st.caption("Puteri Aisyah Sofia | Student ID: 25014776 | MSc Applied Computing | UTP | Al-Khor, Qatar")
+    st.caption("Puteri Aisyah Sofia | ID: 25014776 | MSc Applied Computing | UTP | Al-Khor")
 
 if __name__ == "__main__":
     run()
