@@ -52,7 +52,7 @@ st.markdown("""
 col_left, col_right = st.columns([1.3, 2])
 
 with col_left:
-    st.subheader("👤 Perception Engine")
+    st.subheader("👤 Lumina AI Student Tracker")
     
     # --- TEACHABLE MACHINE WITH START/STOP & EMOTIVE FACES ---
     tm_html = """
