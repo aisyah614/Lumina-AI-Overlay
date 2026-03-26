@@ -8,10 +8,49 @@ if 'is_frustrated' not in st.session_state:
     st.session_state.is_frustrated = False
 
 def apply_lumina_theme():
+    # Anime Classroom Background from your repository
+    bg_url = "https://raw.githubusercontent.com/AisyahSofia/Lumina-AI/main/classroom_bg.jpg"
+    st.markdown(f"""
+    <style>
+    .stApp {{
+        background: linear-gradient(rgba(26, 10, 46, 0.85), rgba(13, 0, 26, 0.85)), url("{bg_url}");
+        background-size: cover; background-attachment: fixed; color: #ffffff;
+    }}
+    
+    /* White Border Containers (Glassmorphism) */
+    [data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {{
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(15px);
+        border-radius: 20px;
+        padding: 30px;
+        border: 2px solid #ffffff; 
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        margin-bottom: 20px;
+    }}
+
+    /* Pink & Purple Action Buttons */
+    .stButton>button {{
+        background: linear-gradient(45deg, #FF1493, #9400D3) !important;
+        color: white !important;
+        border: 2px solid #ffffff !important;
+        border-radius: 50px !important;
+        font-weight: bold !important;
+        transition: 0.3s ease;
+    }}
+    .stButton>button:hover {{
+        transform: scale(1.05);
+        box-shadow: 0 0 25px #FF1493;
+    }}
+
+    h1, h2, h3 {{ color: #f0f0ff !important; text-shadow: 0 0 10px rgba(148, 0, 211, 0.5); }}
+    .stTabs [data-baseweb="tab-list"] {{ background-color: transparent; }}
+    .stTabs [data-baseweb="tab"] {{ color: #ffffff !important; font-weight: bold; }}
+    </style>
+    """, unsafe_allow_html=True)
 
 apply_lumina_theme()
 
-# --- 2. THEMED HEADER (White Border Rectangle) ---
+# --- 2. THEMED HEADER (MSc Project Title) ---
 st.markdown("""
     <div style="border: 2px solid #ffffff; border-radius: 15px; padding: 15px; text-align: center; background: rgba(255, 255, 255, 0.05); margin-bottom: 25px;">
         <h2 style="color: #ffffff; margin: 0; font-family: 'Segoe UI', sans-serif;">
@@ -28,11 +67,8 @@ with col_left:
     # --- TEACHABLE MACHINE WITH START/STOP & EMOTIVE FACES ---
     tm_html = """
     <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 2px solid white; text-align: center;">
-        
-        <div id="robot-mascot" style="font-size: 80px; margin-bottom: 10px;">🤖</div>
-        
+        <div id="robot-mascot" style="font-size: 80px; margin-bottom: 10px; transition: 0.3s ease;">🤖</div>
         <div id="webcam-container" style="margin: 0 auto 15px auto; width: 350px; height: 350px; border-radius: 20px; overflow: hidden; border: 2px solid #ffffff; background: #000;"></div>
-        
         <div id="label-container" style="font-family: sans-serif; font-weight: bold; font-size: 1.5rem; color: #ffffff;">Ready...</div>
         
         <div style="display: flex; gap: 10px; margin-top: 20px;">
@@ -53,7 +89,6 @@ with col_left:
             await webcam.setup(); await webcam.play();
             isTracking = true;
             window.requestAnimationFrame(loop);
-            
             document.getElementById("webcam-container").appendChild(webcam.canvas);
             document.getElementById("start-btn").style.display = "none";
             document.getElementById("stop-btn").style.display = "inline";
@@ -97,7 +132,7 @@ with col_left:
     if detect_signal:
         st.session_state.is_frustrated = True
 
-    st.info("🤖 **Lumina Status:** Empathetic AI buddy is watching for barriers.")
+    st.info("🤖 **Lumina Focus:** Empathy-driven scaffolding active.")
 
 with col_right:
     tab1, tab2 = st.tabs(["🖥️ Desktop Share", "💡 Adaptive Notes"])
@@ -127,13 +162,13 @@ with col_right:
         st.subheader("Support Dashboard")
         
         if st.session_state.is_frustrated:
-            st.error("🤖 Lumina: Barrier Detected! I've simplified the material for you.")
+            st.error("🤖 Lumina: Barrier Detected! Content simplified.")
             st.markdown("""
             <div style="background: rgba(255,20,147,0.1); padding: 20px; border-radius: 15px; border-left: 10px solid #FF1493;">
-                <h3>📖 Simplified View: Plant Nutrition</h3>
+                <h3>📖 Simplified: Photosynthesis</h3>
                 <ul>
-                    <li><b>The Big Goal:</b> Plants make food from sunlight.</li>
-                    <li><b>Green Power:</b> They use Chlorophyll (green pigment) to catch light.</li>
+                    <li><b>Main Idea:</b> Plants turn light into food.</li>
+                    <li><b>Chlorophyll:</b> The green part that catches light.</li>
                 </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -145,7 +180,7 @@ with col_right:
             st.markdown("""
             <div style="background: rgba(255,255,255,0.08); padding: 25px; border-radius: 15px; border-left: 10px solid #9400D3;">
                 <h4>Lumina Scaffolding Dashboard</h4>
-                <p>Status: <b>Standard Mode</b>. I'll jump in if you look confused!</p>
+                <p>Status: <b>Standard Mode</b>. I'll automatically simplify notes if you look stuck.</p>
             </div>
             """, unsafe_allow_html=True)
 
