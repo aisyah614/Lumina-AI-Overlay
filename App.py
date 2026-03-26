@@ -4,73 +4,70 @@ import streamlit as st
 import streamlit.components.v1 as components
 import os
 import av
-import torch
-import torch.nn as nn
-import torchvision.transforms as transforms
-from PIL import Image
-from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
 
-# --- 1. RESEARCH CONFIGURATION ---
-# EfficientFace standard labels for AffectNet/FER
-EFF_LABELS = {0: 'Neutral', 1: 'Happy', 2: 'Sad', 3: 'Surprise', 4: 'Fear', 5: 'Disgust', 6: 'Angry', 7: 'Contempt'}
-SCAFFOLD_TRIGGERS = ['Sad', 'Fear', 'Angry', 'Disgust', 'Contempt']
+# --- 1. LUMINA RESEARCH CONFIGURATION ---
+# Exact 3-State Mapping for your MSc Research
+LUMINA_MAP = {
+    0: 'Neutral', 
+    1: 'Happy', 
+    2: 'Frustrated'
+}
+SCAFFOLD_TRIGGERS = ['Frustrated']
 
-RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
+RTC_CONFIG = {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
 
-st.set_page_config(page_title="Lumina AI: EfficientFace Engine", layout="wide", page_icon="🤖")
+st.set_page_config(page_title="Lumina AI: Inclusive Education", layout="wide", page_icon="🤖")
 
-# --- 2. EFFICIENTFACE MODEL LOADING ---
+# --- 2. LUMINA AI ENGINE LOADING (TensorFlow/Keras) ---
 @st.cache_resource
-def load_efficientface():
+def load_lumina_keras_engine():
     try:
-        # Check for the model weights (ensure you upload 'efficientface.pt' to GitHub)
-        if os.path.exists('efficientface.pt'):
-            # Load the model directly or the state_dict depending on your export
-            model = torch.load('efficientface.pt', map_location=torch.device('cpu'))
-            if hasattr(model, 'eval'):
-                model.eval()
-            return model
+        import tensorflow as tf
+        model_path = 'keras_model.h5'
+        if os.path.exists(model_path):
+            # Using compile=False to avoid issues with custom optimizers during the demo
+            return tf.keras.models.load_model(model_path, compile=False)
         return "MODEL_NOT_FOUND"
     except Exception as e:
-        return f"PYTORCH_ERROR: {str(e)}"
+        return f"ENGINE_ERROR: {str(e)}"
 
-eff_model = load_efficientface()
+lumina_net = load_lumina_keras_engine()
 
-# --- 3. EFFICIENT PERCEPTION MODULE ---
-class EfficientFacePerception:
+# --- 3. LUMINA PERCEPTION MODULE ---
+class LuminaPerception:
     def __init__(self):
         cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
         self.face_cascade = cv2.CascadeClassifier(cascade_path)
         self.current_state = "Neutral"
-        # EfficientFace usually expects 112x112 RGB Normalized tensors
-        self.transform = transforms.Compose([
-            transforms.Resize((112, 112)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
 
     def recv(self, frame):
         img = frame.to_ndarray(format="bgr24")
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        faces = self.face_cascade.detectMultiScale(gray, 1.2, 5)
+        # Sensitivity tuned for Al-Khor indoor lighting
+        faces = self.face_cascade.detectMultiScale(gray, 1.1, 6)
 
         detected = "Neutral"
         for (x, y, w, h) in faces:
-            cv2.rectangle(img, (x, y), (x+w, y+h), (74, 144, 226), 2)
+            # Drawing Lumina's detection frame (Cyan)
+            cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 255), 2)
             
-            if not isinstance(eff_model, str):
+            if not isinstance(lumina_net, str) and lumina_net is not None:
                 try:
-                    # Convert BGR ROI to RGB PIL Image for EfficientFace
-                    roi_bgr = img[y:y+h, x:x+w]
-                    roi_rgb = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2RGB)
-                    pil_img = Image.fromarray(roi_rgb)
+                    # Keras models usually expect 224x224 or 48x48. 
+                    # Assuming standard 224x224 for many Keras-based FER models:
+                    roi = cv2.resize(img[y:y+h, x:x+w], (224, 224))
+                    roi = np.asarray(roi, dtype=np.float32).reshape(1, 224, 224, 3)
+                    # Normalize pixel values
+                    roi = (roi / 127.5) - 1
                     
-                    tensor_img = self.transform(pil_img).unsqueeze(0)
+                    # Prediction
+                    prediction = lumina_net.predict(roi, verbose=0)
+                    index = np.argmax(prediction)
+                    confidence = prediction[0][index]
                     
-                    with torch.no_grad():
-                        outputs = eff_model(tensor_img)
-                        _, predicted = torch.max(outputs, 1)
-                        detected = EFF_LABELS[predicted.item()]
+                    # Only trigger if AI is sure (Thresholding)
+                    if confidence > 0.5:
+                        detected = LUMINA_MAP.get(index, "Neutral")
                 except:
                     pass
         
@@ -81,10 +78,10 @@ class EfficientFacePerception:
 def generate_scaffolding(text):
     if not text: return []
     sentences = text.split('.')
-    return [f"• {s.strip()[:int(len(s)*0.65)]}..." for s in sentences if len(s.strip()) > 15]
+    return [f"• {s.strip()[:int(len(s)*0.70)]}..." for s in sentences if len(s.strip()) > 15]
 
 # --- 5. REMOTE DESKTOP INTERFACE ---
-def remote_desktop_ui():
+def desktop_ui():
     js_code = """
     <div style="background: #111; padding: 15px; border-radius: 12px; border: 1px solid #444;">
         <div style="display: flex; gap: 10px; margin-bottom: 15px;">
@@ -114,12 +111,10 @@ def remote_desktop_ui():
 
 # --- 6. MAIN SYSTEM RUN ---
 def run():
-    st.title("🤖 Lumina AI x EfficientFace")
+    st.title("🤖 Lumina AI: Auto-Adaptive Inclusive Education")
     
-    if eff_model == "MODEL_NOT_FOUND":
-        st.warning("⚠️ 'efficientface.pt' weights not found. Running in simulation mode.")
-    elif isinstance(eff_model, str) and "PYTORCH" in eff_model:
-        st.error(f"❌ Initialization Error: {eff_model}")
+    if lumina_net == "MODEL_NOT_FOUND":
+        st.warning("⚠️ 'keras_model.h5' not found in GitHub. Please check the filename.")
 
     if 'emo' not in st.session_state: st.session_state['emo'] = "Neutral"
     if 'notes' not in st.session_state: st.session_state['notes'] = []
@@ -127,10 +122,11 @@ def run():
     left, right = st.columns([1, 2.2])
 
     with left:
-        st.subheader("👤 EfficientFace Tracker")
+        st.subheader("👤 Student Tracker")
+        from streamlit_webrtc import webrtc_streamer
         ctx = webrtc_streamer(
-            key="eff-face",
-            video_processor_factory=EfficientFacePerception,
+            key="lumina-tracker",
+            video_processor_factory=LuminaPerception,
             rtc_configuration=RTC_CONFIG,
             media_stream_constraints={"video": True, "audio": False}
         )
@@ -139,27 +135,29 @@ def run():
             st.session_state['emo'] = ctx.video_processor.current_state
         
         state = st.session_state['emo']
+        st.divider()
+        
         if state in SCAFFOLD_TRIGGERS:
             st.error(f"⚠️ Affective State: {state.upper()}")
-            # Biology Content for inclusive education demo
-            content = "The mitochondria are organelles that act like a digestive system which takes in nutrients and creates energy."
+            # IGCSE Biology Sample Content
+            content = "The nitrogen cycle is the process by which nitrogen is converted into multiple chemical forms as it circulates among the atmosphere and ecosystems."
             st.session_state['notes'] = generate_scaffolding(content)
-            st.warning("🤖 **Lumina Assist:** EfficientFace detected a learning barrier. Scaffolding active.")
+            st.warning("🤖 **Lumina Assist:** Barrier detected via Keras Engine. Scaffolding active.")
         else:
             st.success(f"System Status: {state}")
 
     with right:
-        t1, t2 = st.tabs(["🖥️ Desktop View", "📚 Scaffolding Results"])
-        with t1: remote_desktop_ui()
+        t1, t2 = st.tabs(["🖥️ Shared Desktop View", "📚 Scaffolding Results"])
+        with t1: desktop_ui()
         with t2:
             if st.session_state['notes'] and state in SCAFFOLD_TRIGGERS:
-                html = "".join([f"<p>{n}</p>" for n in st.session_state['notes']])
-                st.markdown(f"<div style='font-size: 24px; background: #fdf2f2; padding: 30px; border-radius: 12px; border-left: 8px solid #e74c3c; color: #333;'>{html}</div>", unsafe_allow_html=True)
+                html = "".join([f"<p style='margin-bottom:12px;'>{n}</p>" for n in st.session_state['notes']])
+                st.markdown(f"<div style='font-size: 24px; background: #fdf2f2; padding: 25px; border-radius: 12px; border-left: 10px solid #e74c3c; color: #333;'>{html}</div>", unsafe_allow_html=True)
             else:
-                st.info("Everything looks clear. Lumina is monitoring for learning barriers.")
+                st.info("Lumina AI is monitoring. Simplified notes will appear here if you look frustrated.")
 
     st.divider()
-    st.caption("Puteri Aisyah Sofia | Student ID: 25014776 | MSc Applied Computing | UTP | Al-Khor, Qatar")
+    st.caption("Puteri Aisyah Sofia | Student ID: 25014776 | UTP | Al-Khor, Qatar")
 
 if __name__ == "__main__":
     run()
