@@ -1,6 +1,8 @@
-tensorflow==2.15.0
-numpy==1.26.4
+torch
+torchvision
+numpy
 opencv-python-headless
 streamlit
 streamlit-webrtc
 av
+Pillow
