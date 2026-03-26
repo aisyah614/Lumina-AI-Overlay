@@ -46,22 +46,52 @@ class LuminaPerception:
         self.current_state = detected
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# --- 4. UI COMPONENTS ---
+# --- 4. JS DESKTOP COMPONENT ---
+def desktop_sharing_js():
+    js_code = """
+    <div style="background: #111; padding: 15px; border-radius: 12px; border: 1px solid #444;">
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <button id="start" style="background: #27ae60; border: none; padding: 12px; border-radius: 5px; color: white; cursor: pointer; flex: 1; font-weight: bold;">🌐 Share Desktop</button>
+            <button id="stop" style="background: #c0392b; border: none; padding: 12px; border-radius: 5px; color: white; cursor: pointer; flex: 1; font-weight: bold; display: none;">🛑 Stop</button>
+        </div>
+        <video id="v" autoplay playsinline style="width: 100%; height: 320px; border-radius: 8px; background: #000;"></video>
+    </div>
+    <script>
+    const btnS = document.getElementById('start');
+    const btnE = document.getElementById('stop');
+    const video = document.getElementById('v');
+    let stream = null;
+    btnS.onclick = async () => {
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        video.srcObject = stream;
+        btnS.style.display = 'none'; btnE.style.display = 'block';
+    };
+    btnE.onclick = () => {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        video.srcObject = null;
+        btnS.style.display = 'block'; btnE.style.display = 'none';
+    };
+    </script>
+    """
+    components.html(js_code, height=450)
+
+# --- 5. UI COMPONENTS ---
 st.title("✨ Welcome to Lumina AI ✨")
 st.sidebar.title("🎇 Navigation 🎇")
-choice_options = st.sidebar.selectbox("", ('Home', 'Start Tracker', 'About Researcher'))
 
-# --- HOME TAB ---
+# FIXED: Added label name and set visibility to 'collapsed' to fix the error
+choice_options = st.sidebar.selectbox(
+    "Menu Selection", 
+    ('Home', 'Start Tracker', 'About Researcher'),
+    label_visibility="collapsed"
+)
+
 if choice_options == "Home":
     st.header('👨‍🏫 Empathetic Assistive Technology for Inclusive Education 👩‍🏫')
-    # Use a placeholder if your specific 'face.jpeg' isn't in the folder yet
-    st.info("Lumina AI uses Affective Computing to detect student frustration and provide real-time simplified learning content.")
-    
-    st.sidebar.subheader("💎 Goal: Enhancing digital learning by detecting cognitive barriers.")
-    st.sidebar.subheader("💎 Method: Real-time Facial Expression Recognition (FER).")
-    st.sidebar.subheader("💎 Action: Automated scaffolding (Simplified Notes) triggered by frustration.")
+    st.info("Lumina AI monitors cognitive barriers in real-time to simplify digital learning materials.")
+    st.sidebar.subheader("💎 Goal: Reduce cognitive load via FER.")
+    st.sidebar.subheader("💎 Method: Keras-based Emotion Recognition.")
 
-# --- START TRACKER TAB ---
 if choice_options == "Start Tracker":
     if 'emo' not in st.session_state: st.session_state['emo'] = "Neutral"
     
@@ -69,9 +99,9 @@ if choice_options == "Start Tracker":
     col_l, col_r = st.columns([1, 1.5])
     
     with col_l:
-        st.write("Click Start to activate the Empathetic Engine.")
+        st.write("Click Start to activate the Tracker.")
         ctx = webrtc_streamer(
-            key="lumina-v8",
+            key="lumina-v9",
             video_processor_factory=LuminaPerception,
             rtc_configuration=RTC_CONFIG,
             media_stream_constraints={"video": True, "audio": False}
@@ -89,21 +119,19 @@ if choice_options == "Start Tracker":
         tab_name = "💡 Simplified Notes" if status == "Frustrated" else "Learning Content"
         t1, t2 = st.tabs(["Desktop View", tab_name])
         with t1:
-            st.write("Desktop sharing placeholder for study material.")
+            desktop_sharing_js()
         with t2:
             if status == "Frustrated":
                 st.markdown("""
                 ### 📖 Lumina Scaffolding: Plant Nutrition
-                * **Chlorophyll:** Green pigment that absorbs light.
-                * **The Test:** Use Iodine to find starch.
-                * **Blue/Black Result:** Photosynthesis happened (Light was present).
-                * **Brown Result:** No photosynthesis (No light).
+                * **Chlorophyll:** Absorbs light energy.
+                * **Test:** Use Iodine for starch detection.
+                * **Result:** Blue/Black = Starch present.
                 """)
-                st.toast("Helpful notes unlocked!", icon="💡")
+                st.toast("New notes available!", icon="💡")
             else:
-                st.info("Look confused or look into the camera to trigger simplified notes.")
+                st.info("Desktop sharing active. Notes will appear if confusion is detected.")
 
-# --- ABOUT TAB ---
 if choice_options == "About":
     st.title('Lumina AI Project Lead')
     col1, col2 = st.columns([1, 2])
@@ -111,11 +139,9 @@ if choice_options == "About":
         st.subheader("Puteri Aisyah Sofia")
         st.write("**Student ID:** 25014776")
         st.write("**MSc Applied Computing**")
-        st.write("Universiti Teknologi PETRONAS (UTP)")
     with col2:
-        st.subheader("Research Scope")
-        st.write("Developing empathetic assistive technology to reduce cognitive load in primary students through real-time text simplification and facial expression monitoring.")
-        st.markdown("[UTP Student Profile](https://www.utp.edu.my/)")
+        st.subheader("Research Summary")
+        st.write("Specializing in Affective Computing and empathetic technology for primary education.")
 
 st.sidebar.divider()
 st.sidebar.caption("Lumina AI | Al-Khor, Qatar | 2026")
