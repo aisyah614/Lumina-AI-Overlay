@@ -8,7 +8,7 @@ import tensorflow as tf
 from streamlit_webrtc import webrtc_streamer
 import streamlit.components.v1 as components
 
-# --- 1. RESEARCH ENGINE CONFIG ---
+# --- 1. LUMINA RESEARCH CONFIG ---
 L_MAP = {0: 'Neutral', 1: 'Happy', 2: 'Frustrated'}
 RTC_CONFIG = {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
 
@@ -75,33 +75,35 @@ def desktop_sharing_js():
     """
     components.html(js_code, height=450)
 
-# --- 5. UI COMPONENTS ---
+# --- 5. INTERFACE LAYOUT (Pivoted to Lumina AI) ---
 st.title("✨ Welcome to Lumina AI ✨")
 st.sidebar.title("🎇 Navigation 🎇")
-
-# FIXED: Added label name and set visibility to 'collapsed' to fix the error
-choice_options = st.sidebar.selectbox(
-    "Menu Selection", 
-    ('Home', 'Start Tracker', 'About Researcher'),
-    label_visibility="collapsed"
-)
+choice_options = st.sidebar.selectbox("Options", ('Home', 'Start Tracker', 'About Researcher'))
 
 if choice_options == "Home":
-    st.header('👨‍🏫 Empathetic Assistive Technology for Inclusive Education 👩‍🏫')
-    st.info("Lumina AI monitors cognitive barriers in real-time to simplify digital learning materials.")
-    st.sidebar.subheader("💎 Goal: Reduce cognitive load via FER.")
-    st.sidebar.subheader("💎 Method: Keras-based Emotion Recognition.")
+    st.title('🤖 Lumina AI: Empathetic Assistive Technology')
+    # If you have a banner image, put it in 'data/banner.png'
+    try:
+        image = Image.open('data/face.jpeg')
+        st.image(image)
+    except:
+        st.info("Lumina AI is ready to monitor and assist.")
+
+    st.sidebar.subheader("""💎 Goal: Enhancing inclusive education by detecting and reducing cognitive barriers.""")
+    st.sidebar.subheader("""💎 Feature: Real-time frustration detection triggers automated scaffolding (Simplified Notes).""")
+    st.sidebar.subheader("""💎 Context: Designed for students navigating complex digital materials like IGCSE Science.""")
 
 if choice_options == "Start Tracker":
     if 'emo' not in st.session_state: st.session_state['emo'] = "Neutral"
     
-    st.header("🤖 Lumina Live Monitoring")
-    col_l, col_r = st.columns([1, 1.5])
+    st.header("Webcam Live Feed & Study Support")
+    st.write("Click 'Start' below to activate the empathetic monitoring engine.")
     
-    with col_l:
-        st.write("Click Start to activate the Tracker.")
+    col_cam, col_supp = st.columns([1, 1.5])
+    
+    with col_cam:
         ctx = webrtc_streamer(
-            key="lumina-v9",
+            key="lumina-v10",
             video_processor_factory=LuminaPerception,
             rtc_configuration=RTC_CONFIG,
             media_stream_constraints={"video": True, "audio": False}
@@ -111,37 +113,46 @@ if choice_options == "Start Tracker":
         
         status = st.session_state['emo']
         if status == "Frustrated":
-            st.error(f"Status: {status} (Confusion Detected)")
+            st.error(f"Status: {status} (Scaffolding Triggered)")
         else:
             st.success(f"Status: {status}")
 
-    with col_r:
-        tab_name = "💡 Simplified Notes" if status == "Frustrated" else "Learning Content"
-        t1, t2 = st.tabs(["Desktop View", tab_name])
+    with col_supp:
+        # Dynamic Tab Label (The "Ting" notification)
+        tab_label = "🔔 Simplified Notes" if status == "Frustrated" else "Simplified Notes"
+        t1, t2 = st.tabs(["Desktop View", tab_label])
         with t1:
             desktop_sharing_js()
         with t2:
             if status == "Frustrated":
+                st.subheader("🤖 Lumina Simplification: Plant Nutrition")
                 st.markdown("""
-                ### 📖 Lumina Scaffolding: Plant Nutrition
-                * **Chlorophyll:** Absorbs light energy.
-                * **Test:** Use Iodine for starch detection.
-                * **Result:** Blue/Black = Starch present.
+                * **Chlorophyll:** Green pigment needed for food.
+                * **The Test:** Boil leaf in alcohol, then add Iodine.
+                * **Result:** Blue/Black = Starch is present.
                 """)
-                st.toast("New notes available!", icon="💡")
+                st.toast("Notes simplified for you!", icon="💡")
             else:
-                st.info("Desktop sharing active. Notes will appear if confusion is detected.")
+                st.info("Start tracking to see simplified notes when confused.")
 
 if choice_options == "About":
-    st.title('Lumina AI Project Lead')
-    col1, col2 = st.columns([1, 2])
+    st.title('Project Lead')
+    col1, col2 = st.columns(2)
     with col1:
         st.subheader("Puteri Aisyah Sofia")
-        st.write("**Student ID:** 25014776")
+        # Ensure you have your profile pic in data/profile.png
+        try:
+            image_1 = Image.open('data/profile.png')
+            st.image(image_1, width=250)
+        except:
+            st.write("[Profile Image Placeholder]")
         st.write("**MSc Applied Computing**")
+        st.write("Universiti Teknologi PETRONAS")
+        st.write("Email: puteri_25014776@utp.edu.my")
     with col2:
-        st.subheader("Research Summary")
-        st.write("Specializing in Affective Computing and empathetic technology for primary education.")
+        st.subheader("Research Focus")
+        st.write("Specializing in Affective Computing to improve educational outcomes for students with diverse needs.")
+        st.markdown("""[LinkedIn Profile](https://www.linkedin.com/in/aisyah-sofia-binti-muzaisham-77631a232/)""")
 
 st.sidebar.divider()
-st.sidebar.caption("Lumina AI | Al-Khor, Qatar | 2026")
+st.sidebar.caption("Lumina AI | 2026 | Al-Khor, Qatar")
