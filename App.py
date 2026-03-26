@@ -61,7 +61,7 @@ def apply_classroom_theme():
 apply_classroom_theme()
 
 # --- APP LOGIC ---
-RTC_CONFIG = RTCConfiguration({{"iceServers": [{{"urls": ["stun:stun.l.google.com:19302"]}}]}})
+RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
 if 'emo' not in st.session_state: st.session_state['emo'] = "Neutral"
 
 st.title("☀️ Lumina AI: Your Learning Sanctuary")
