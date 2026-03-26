@@ -56,18 +56,19 @@ with col_left:
     st.subheader("👤 Perception Engine")
     
     # --- TEACHABLE MACHINE CLOUD INTEGRATION ---
-    # Using your specific model link: https://teachablemachine.withgoogle.com/models/PGXyZqCEN/
     tm_html = """
     <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 2px solid white; text-align: center;">
-        <div id="webcam-container" style="margin-bottom: 15px; border-radius: 12px; overflow: hidden; border: 1px solid #ffffff; background: #000;"></div>
-        <div id="label-container" style="font-family: 'Segoe UI', sans-serif; color: #FF69B4; font-weight: bold; font-size: 1.5rem; letter-spacing: 1px;">Ready for Session...</div>
+        
+        <div id="webcam-container" style="margin: 0 auto 15px auto; width: 350px; height: 350px; border-radius: 20px; overflow: hidden; border: 2px solid #ffffff; background: #000; box-shadow: 0 0 15px rgba(255,255,255,0.2);"></div>
+        
+        <div id="label-container" style="font-family: 'Segoe UI', sans-serif; color: #FF69B4; font-weight: bold; font-size: 1.5rem; letter-spacing: 1px;">Ready...</div>
+        
         <button type="button" onclick="init()" style="width: 100%; margin-top: 20px; padding: 15px; background: linear-gradient(45deg, #FF1493, #9400D3); color: white; border: 2px solid white; border-radius: 30px; cursor: pointer; font-weight: bold; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(208, 32, 144, 0.3);">🚀 Start Lumina Tracker</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script type="text/javascript">
-        // --- USING YOUR CLOUD MODEL URL ---
         const URL = "https://teachablemachine.withgoogle.com/models/PGXyZqCEN/"; 
 
         let model, webcam, labelContainer, maxPredictions;
@@ -84,13 +85,19 @@ with col_left:
                 maxPredictions = model.getTotalClasses();
 
                 const flip = true; 
+                // FIXED: Setting width and height to 350 for a square feed
                 webcam = new tmImage.Webcam(350, 350, flip); 
                 await webcam.setup(); 
                 await webcam.play();
                 window.requestAnimationFrame(loop);
 
-                document.getElementById("webcam-container").innerHTML = ""; 
-                document.getElementById("webcam-container").appendChild(webcam.canvas);
+                const container = document.getElementById("webcam-container");
+                container.innerHTML = ""; 
+                container.appendChild(webcam.canvas);
+                
+                // Ensure the canvas itself stays square
+                webcam.canvas.style.borderRadius = "20px";
+                
                 labelDiv.innerHTML = "Lumina Tracking Active!";
             } catch (e) {
                 console.error(e);
@@ -119,28 +126,25 @@ with col_left:
             const labelDiv = document.getElementById("label-container");
             labelDiv.innerHTML = "Detected: " + bestClass;
             
-            // Trigger pink pulse for frustration
             if(bestClass === "Frustrated") {
                 labelDiv.style.color = "#FF1493";
                 labelDiv.style.textShadow = "0 0 10px #FF1493";
             } else {
-                labelDiv.style.color = "#00FA9A"; // Spring Green for Neutral/Happy
+                labelDiv.style.color = "#00FA9A"; 
                 labelDiv.style.textShadow = "none";
             }
         }
     </script>
     """
-    components.html(tm_html, height=580)
+    components.html(tm_html, height=620)
     
-    # Robot Mascot Visual
     st.image("https://cdn-icons-png.flaticon.com/512/4712/4712010.png", width=110)
-    st.info("🤖 **Lumina Focus:** Your empathetic AI buddy is monitoring for barriers.")
+    st.info("🤖 **Lumina Status:** Empathetic AI active. Monitoring for learning barriers.")
 
 with col_right:
     tab1, tab2 = st.tabs(["🖥️ Desktop Share", "💡 Adaptive Notes"])
     
     with tab1:
-        # Full Desktop Share with Stop Button
         share_js = """
         <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 2px solid white;">
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
@@ -173,11 +177,11 @@ with col_right:
         </div>
         """, unsafe_allow_html=True)
         
-        with st.expander("🛠️ Demo: Force Text Simplification"):
+        with st.expander("🛠️ Demo: Trigger Manual Simplification"):
             st.markdown("""
             ### 📖 Simplified Photosynthesis
-            * **Summary:** Plants use sunlight to create glucose (food).
-            * **Key Factor:** Chlorophyll (The green pigment) catches the light.
+            * **Summary:** Plants use light to make food.
+            * **Key Factor:** Chlorophyll (Green pigment) catches the light.
             * **Output:** Oxygen and Starch.
             """)
 
