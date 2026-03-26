@@ -4,80 +4,84 @@ import streamlit as st
 import streamlit.components.v1 as components
 import os
 import av
+import torch
+import torch.nn as nn
+import torchvision.transforms as transforms
+from PIL import Image
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
 
 # --- 1. RESEARCH CONFIGURATION ---
-# EmotiEffLib standard labels (usually aligns with AffectNet 7 or 8)
-EMOTIEFF_LABELS = {0: 'Angry', 1: 'Disgust', 2: 'Fear', 3: 'Happy', 4: 'Sad', 5: 'Surprise', 6: 'Neutral'}
-SCAFFOLD_TRIGGERS = ['Angry', 'Fear', 'Sad', 'Disgust']
+# EfficientFace standard labels for AffectNet/FER
+EFF_LABELS = {0: 'Neutral', 1: 'Happy', 2: 'Sad', 3: 'Surprise', 4: 'Fear', 5: 'Disgust', 6: 'Angry', 7: 'Contempt'}
+SCAFFOLD_TRIGGERS = ['Sad', 'Fear', 'Angry', 'Disgust', 'Contempt']
 
 RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
 
-st.set_page_config(page_title="Lumina AI: EmotiEffLib Assist", layout="wide", page_icon="🤖")
+st.set_page_config(page_title="Lumina AI: EfficientFace Engine", layout="wide", page_icon="🤖")
 
-# --- 2. EMOTIEFFLIB ENGINE LOADING ---
+# --- 2. EFFICIENTFACE MODEL LOADING ---
 @st.cache_resource
-def load_emotieff_engine():
+def load_efficientface():
     try:
-        import tensorflow as tf
-        # Ensure you have uploaded the EmotiEffLib weights as 'emotieff_model.h5'
-        if os.path.exists('emotieff_model.h5'):
-            return tf.keras.models.load_model('emotieff_model.h5', compile=False)
+        # Check for the model weights (ensure you upload 'efficientface.pt' to GitHub)
+        if os.path.exists('efficientface.pt'):
+            # Load the model directly or the state_dict depending on your export
+            model = torch.load('efficientface.pt', map_location=torch.device('cpu'))
+            if hasattr(model, 'eval'):
+                model.eval()
+            return model
         return "MODEL_NOT_FOUND"
     except Exception as e:
-        return f"ENGINE_ERROR: {str(e)}"
+        return f"PYTORCH_ERROR: {str(e)}"
 
-model = load_emotieff_engine()
+eff_model = load_efficientface()
 
 # --- 3. EFFICIENT PERCEPTION MODULE ---
-class EmotiEffPerception:
+class EfficientFacePerception:
     def __init__(self):
         cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
         self.face_cascade = cv2.CascadeClassifier(cascade_path)
-        self.current_emotion = "Neutral"
+        self.current_state = "Neutral"
+        # EfficientFace usually expects 112x112 RGB Normalized tensors
+        self.transform = transforms.Compose([
+            transforms.Resize((112, 112)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
 
     def recv(self, frame):
         img = frame.to_ndarray(format="bgr24")
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # Optimized face detection for EmotiEffLib input
-        faces = self.face_cascade.detectMultiScale(gray, 1.1, 5)
+        faces = self.face_cascade.detectMultiScale(gray, 1.2, 5)
 
         detected = "Neutral"
         for (x, y, w, h) in faces:
-            # Drawing the Lumina Assist frame
             cv2.rectangle(img, (x, y), (x+w, y+h), (74, 144, 226), 2)
             
-            if not isinstance(model, str):
+            if not isinstance(eff_model, str):
                 try:
-                    # EmotiEffLib typically uses 224x224 RGB or 48x48 Grayscale
-                    # We will use the standard 48x48 resize for efficiency
-                    roi = gray[y:y+h, x:x+w]
-                    roi = cv2.resize(roi, (48, 48)) / 255.0
-                    roi = np.reshape(roi, (1, 48, 48, 1))
+                    # Convert BGR ROI to RGB PIL Image for EfficientFace
+                    roi_bgr = img[y:y+h, x:x+w]
+                    roi_rgb = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2RGB)
+                    pil_img = Image.fromarray(roi_rgb)
                     
-                    preds = model.predict(roi, verbose=0)[0]
-                    detected = EMOTIEFF_LABELS[np.argmax(preds)]
+                    tensor_img = self.transform(pil_img).unsqueeze(0)
+                    
+                    with torch.no_grad():
+                        outputs = eff_model(tensor_img)
+                        _, predicted = torch.max(outputs, 1)
+                        detected = EFF_LABELS[predicted.item()]
                 except:
                     pass
         
-        self.current_emotion = detected
+        self.current_state = detected
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# --- 4. AUTO-SCAFFOLDING (THE RESEARCH CORE) ---
+# --- 4. AUTO-SCAFFOLDING LOGIC ---
 def generate_scaffolding(text):
-    """Simplifies complex text to reduce cognitive load."""
     if not text: return []
     sentences = text.split('.')
-    points = []
-    for s in sentences:
-        clean = s.strip()
-        if len(clean) > 15:
-            # Extracting the most relevant 65% of the sentence
-            words = clean.split()
-            summary = " ".join(words[:int(len(words)*0.65)])
-            points.append(f"• {summary}...")
-    return points
+    return [f"• {s.strip()[:int(len(s)*0.65)]}..." for s in sentences if len(s.strip()) > 15]
 
 # --- 5. REMOTE DESKTOP INTERFACE ---
 def remote_desktop_ui():
@@ -110,77 +114,52 @@ def remote_desktop_ui():
 
 # --- 6. MAIN SYSTEM RUN ---
 def run():
-    st.title("🤖 Lumina AI x EmotiEffLib: Efficient Empathy")
+    st.title("🤖 Lumina AI x EfficientFace")
     
-    if model == "MODEL_NOT_FOUND":
-        st.warning("⚠️ 'emotieff_model.h5' not found. Please upload the weights to GitHub.")
+    if eff_model == "MODEL_NOT_FOUND":
+        st.warning("⚠️ 'efficientface.pt' weights not found. Running in simulation mode.")
+    elif isinstance(eff_model, str) and "PYTORCH" in eff_model:
+        st.error(f"❌ Initialization Error: {eff_model}")
 
-    if 'emo_state' not in st.session_state: st.session_state['emo_state'] = "Neutral"
-    if 'auto_scaffold' not in st.session_state: st.session_state['auto_scaffold'] = []
+    if 'emo' not in st.session_state: st.session_state['emo'] = "Neutral"
+    if 'notes' not in st.session_state: st.session_state['notes'] = []
 
-    col_left, col_right = st.columns([1, 2.2])
+    left, right = st.columns([1, 2.2])
 
-    with col_left:
-        st.subheader("👤 EmotiEff Tracker")
+    with left:
+        st.subheader("👤 EfficientFace Tracker")
         ctx = webrtc_streamer(
-            key="emotieff-perception",
-            video_processor_factory=EmotiEffPerception,
+            key="eff-face",
+            video_processor_factory=EfficientFacePerception,
             rtc_configuration=RTC_CONFIG,
             media_stream_constraints={"video": True, "audio": False}
         )
         
         if ctx.video_processor:
-            st.session_state['emo_state'] = ctx.video_processor.current_emotion
+            st.session_state['emo'] = ctx.video_processor.current_state
         
-        st.divider()
-        state = st.session_state['emo_state']
-        
+        state = st.session_state['emo']
         if state in SCAFFOLD_TRIGGERS:
-            st.error(f"⚠️ Neural Detection: {state.upper()}")
-            # Simulated complex IGCSE Physics content
-            complex_text = "The principle of conservation of energy states that energy cannot be created or destroyed, only transformed from one form to another, such as kinetic to potential."
-            st.session_state['auto_scaffold'] = generate_scaffolding(complex_text)
-            st.warning("🤖 **Lumina Assist:** Barriers detected via EmotiEffLib. Scaffolding is active.")
+            st.error(f"⚠️ Affective State: {state.upper()}")
+            # Biology Content for inclusive education demo
+            content = "The mitochondria are organelles that act like a digestive system which takes in nutrients and creates energy."
+            st.session_state['notes'] = generate_scaffolding(content)
+            st.warning("🤖 **Lumina Assist:** EfficientFace detected a learning barrier. Scaffolding active.")
         else:
             st.success(f"System Status: {state}")
 
-    with col_right:
-        tab_desktop, tab_scaffold = st.tabs(["🖥️ Desktop View", "📚 Scaffolding Results"])
-        
-        with tab_desktop:
-            remote_desktop_ui()
-            
-        with tab_scaffold:
-            st.subheader("🚀 Real-Time Simplified Notes")
-            if st.session_state['auto_scaffold'] and state in SCAFFOLD_TRIGGERS:
-                notes_html = "".join([f"<p style='margin-bottom:15px;'>{p}</p>" for p in st.session_state['auto_scaffold']])
-                st.markdown(
-                    f"""
-                    <div style="font-size: 24px; background: #fdf2f2; padding: 30px; 
-                    border-radius: 15px; border-left: 10px solid #e74c3c; color: #2c3e50;">
-                        <h3 style="color: #e74c3c; margin-top:0;">🤖 Lumina Support:</h3>
-                        {notes_html}
-                    </div>
-                    """, unsafe_allow_html=True
-                )
-                if st.button("✅ I understand this concept"):
-                    st.session_state['auto_scaffold'] = []
-                    st.rerun()
+    with right:
+        t1, t2 = st.tabs(["🖥️ Desktop View", "📚 Scaffolding Results"])
+        with t1: remote_desktop_ui()
+        with t2:
+            if st.session_state['notes'] and state in SCAFFOLD_TRIGGERS:
+                html = "".join([f"<p>{n}</p>" for n in st.session_state['notes']])
+                st.markdown(f"<div style='font-size: 24px; background: #fdf2f2; padding: 30px; border-radius: 12px; border-left: 8px solid #e74c3c; color: #333;'>{html}</div>", unsafe_allow_html=True)
             else:
-                st.info("EmotiEffLib is monitoring for cognitive load. Notes will appear here if you look frustrated.")
+                st.info("Everything looks clear. Lumina is monitoring for learning barriers.")
 
-    # --- 7. MASCOT FOOTER ---
     st.divider()
-    m_left, m_right = st.columns([1, 5])
-    with m_left:
-        icon_id = "4712027" if state in SCAFFOLD_TRIGGERS else ("4712035" if state == 'Happy' else "4712010")
-        st.image(f"https://cdn-icons-png.flaticon.com/512/4712/{icon_id}.png", width=100)
-    with m_right:
-        if state in SCAFFOLD_TRIGGERS:
-            st.write(f"🤖 **Lumina:** EmotiEffLib indicates you're feeling {state}. Let's break this physics problem down.")
-        else:
-            st.write("🤖 **Lumina:** You're doing great! EmotiEffLib shows you're focused and steady.")
-        st.caption("Puteri Aisyah Sofia | Student ID: 25014776 | MSc Applied Computing | UTP | Al-Khor, Qatar")
+    st.caption("Puteri Aisyah Sofia | Student ID: 25014776 | MSc Applied Computing | UTP | Al-Khor, Qatar")
 
 if __name__ == "__main__":
     run()
