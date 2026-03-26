@@ -1,119 +1,119 @@
-import numpy as np
-import cv2
 import streamlit as st
-import streamlit.components.v1 as components
-import os
-import av
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
+import streamlit.components.v1 as components
+from model_predict import VideoProcessor
+import time
 
-# --- 1. RESEARCH CONFIGURATION ---
-EMOTION_LABELS = {0: 'Frustrated', 1: 'Happy', 2: 'Neutral'}
+# --- 1. THEMES & CSS INJECTION ---
+st.set_page_config(page_title="Lumina AI | Inclusive Education", layout="wide", page_icon="🤖")
+
+def local_css():
+    st.markdown("""
+    <style>
+    /* Main Background */
+    .stApp {
+        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+        color: #ffffff;
+    }
+    
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: rgba(48, 43, 99, 0.7) !important;
+        border-right: 2px solid #ff00ff;
+    }
+
+    /* Buttons & Interactions */
+    .stButton>button {
+        background: linear-gradient(45deg, #ff00ff, #7000ff);
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 10px 25px;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+    .stButton>button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 15px #ff00ff;
+    }
+
+    /* Tabs Styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        background-color: transparent;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 10px 10px 0 0;
+        color: #ff00ff !important;
+        padding: 10px 20px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #ff00ff !important;
+        color: white !important;
+    }
+
+    /* Scaffolding Card */
+    .scaffold-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-left: 5px solid #ff00ff;
+        padding: 25px;
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+        margin: 10px 0;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+local_css()
+
+# --- 2. GLOBAL CONFIG & STATE ---
 RTC_CONFIG = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
 
-st.set_page_config(page_title="Lumina AI: Inclusive Education", layout="wide", page_icon="🤖")
+if 'emo' not in st.session_state: st.session_state['emo'] = "Neutral"
+if 'page' not in st.session_state: st.session_state['page'] = "Home"
 
-# --- 2. SMART MODEL LOADING ---
-@st.cache_resource
-def load_lumina_model():
-    try:
-        import tensorflow as tf
-        # Checks both common filenames to prevent 'Missing File' error
-        for filename in ['model.h5', 'keras_model.h5']:
-            if os.path.exists(filename):
-                return tf.keras.models.load_model(filename, compile=False)
-        return "NOT_FOUND"
-    except Exception as e:
-        return f"ERROR: {str(e)}"
+# --- 3. SIDEBAR NAVIGATION ---
+with st.sidebar:
+    st.title("💠 Lumina AI")
+    st.write("---")
+    if st.button("🏠 Project Home", use_container_width=True):
+        st.session_state.page = "Home"
+    if st.button("🚀 Start Study Session", use_container_width=True):
+        st.session_state.page = "Session"
+    st.write("---")
+    st.caption("Researcher: Puteri Aisyah Sofia")
+    st.caption("Supervisor: AP Dr. Ibrahim Venkat")
 
-model = load_lumina_model()
-
-# --- 3. PERCEPTION MODULE ---
-class LuminaPerception:
-    def __init__(self):
-        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
-        self.face_cascade = cv2.CascadeClassifier(cascade_path)
-        self.last_emotion = "Neutral"
-
-    def recv(self, frame):
-        img = frame.to_ndarray(format="bgr24")
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        faces = self.face_cascade.detectMultiScale(gray, 1.1, 5)
-
-        detected = "Neutral"
-        for (x, y, w, h) in faces:
-            cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 255), 2)
-            
-            # Only predict if model loaded successfully
-            if not isinstance(model, str) and model is not None:
-                try:
-                    roi = cv2.resize(gray[y:y+h, x:x+w], (48, 48)) / 255.0
-                    roi = roi.reshape(1, 48, 48, 1)
-                    preds = model.predict(roi, verbose=0)[0]
-                    detected = EMOTION_LABELS[np.argmax(preds)]
-                except: pass
-        
-        self.last_emotion = detected
-        return av.VideoFrame.from_ndarray(img, format="bgr24")
-
-# --- 4. TEXT SCAFFOLDING LOGIC ---
-def auto_scaffold_text(text):
-    sentences = text.split('.')
-    points = [f"• {s.strip()}..." for s in sentences if len(s.strip()) > 10]
-    return points[:4] # Keep it brief for the demo
-
-# --- 5. DESKTOP INTERFACE WITH BUTTONS ---
-def remote_control_interface():
-    js_code = """
-    <div style="background: #111; padding: 15px; border-radius: 12px; border: 1px solid #444;">
-        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <button id="s" style="background: #27ae60; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; flex: 1; font-weight: bold;">🌐 Share Study Desktop</button>
-            <button id="e" style="background: #c0392b; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; flex: 1; font-weight: bold; display: none;">🛑 Stop</button>
-        </div>
-        <video id="v" autoplay playsinline style="width: 100%; height: 350px; background: #000; border-radius: 8px;"></video>
-    </div>
-    <script>
-    const btnS = document.getElementById('s'); const btnE = document.getElementById('e');
-    const video = document.getElementById('v'); let stream = null;
-    btnS.onclick = async () => {
-        stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        video.srcObject = stream;
-        btnS.style.display='none'; btnE.style.display='inline';
-    };
-    btnE.onclick = () => {
-        if(stream) stream.getTracks().forEach(t => t.stop());
-        video.srcObject = null;
-        btnS.style.display='inline'; btnE.style.display='none';
-    };
-    </script>
-    """
-    components.html(js_code, height=480)
-
-# --- 6. MAIN SYSTEM RUN ---
-def run():
-    st.title("🤖 Lumina AI: Auto-Adaptive Support")
+# --- 4. PAGE: HOME (Research Overview) ---
+if st.session_state.page == "Home":
+    st.title("✨ Enhancing Inclusive Education through Empathetic Assistive Technology")
     
-    if 'emo' not in st.session_state: st.session_state['emo'] = "Neutral"
-
-    # Sidebar Tools
-    st.sidebar.title("🛠️ Lumina Tools")
-    if model == "NOT_FOUND":
-        st.sidebar.warning("⚠️ Model file not detected. Using Simulation Mode.")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown("""
+        ### 🎯 Research Objectives
+        1. **Real-time Affective Monitoring:** Detecting cognitive barriers (frustration) using FER.
+        2. **Adaptive Scaffolding:** Providing automated text simplification to reduce cognitive load.
+        3. **Inclusive Design:** Supporting diverse learners, specifically in IGCSE Science subjects.
+        """)
+    with col_b:
+        st.info("💡 **Methodology:** Using a Custom CNN trained on Neutral, Happy, and Frustrated classes to trigger just-in-time pedagogical support.")
     
-    # DEMO OVERRIDE: Essential for a smooth presentation
-    st.sidebar.subheader("Presentation Controls")
-    if st.sidebar.button("Simulate Frustration (Confused)"):
-        st.session_state['emo'] = "Frustrated"
-    if st.sidebar.button("Reset to Neutral"):
-        st.session_state['emo'] = "Neutral"
+    st.image("https://img.freepik.com/free-vector/ai-technology-brain-background-digital-transformation-concept_53876-117769.jpg", use_column_width=True)
 
-    l_col, r_col = st.columns([1, 2.2])
+# --- 5. PAGE: STUDY SESSION ---
+elif st.session_state.page == "Session":
+    st.header("🚀 Lumina Live Dashboard")
+    
+    col_cam, col_main = st.columns([1.2, 2])
 
-    with l_col:
-        st.subheader("👤 Student Tracker")
+    with col_cam:
+        st.subheader("👤 Perception Engine")
         ctx = webrtc_streamer(
-            key="lumina-v11",
+            key="lumina-perception-v3",
             mode=WebRtcMode.SENDRECV,
-            video_processor_factory=LuminaPerception,
+            video_processor_factory=VideoProcessor,
             rtc_configuration=RTC_CONFIG,
             media_stream_constraints={"video": True, "audio": False}
         )
@@ -121,37 +121,52 @@ def run():
         if ctx.video_processor:
             st.session_state['emo'] = ctx.video_processor.last_emotion
         
-        current_emo = st.session_state['emo']
-        st.divider()
+        status = st.session_state['emo']
         
-        if current_emo == "Frustrated":
-            st.error(f"Status: {current_emo}")
-            st.info("🤖 **Lumina Assist:** Simplified notes have been generated to help you.")
+        # Dynamic Status Display
+        if status == "Frustrated":
+            st.markdown(f'<h2 style="color:#ff00ff; text-shadow: 0 0 10px #ff00ff;">🚨 {status}</h2>', unsafe_allow_html=True)
+            st.toast("Lumina: Scaffolding Triggered", icon="🔔")
+        elif status == "Happy":
+            st.markdown(f'<h2 style="color:#00ffff;">✨ {status}</h2>', unsafe_allow_html=True)
         else:
-            st.success(f"Status: {current_emo}")
+            st.markdown(f'<h2 style="color:#ffffff; opacity:0.6;">🌑 {status}</h2>', unsafe_allow_html=True)
 
-    with r_col:
-        tab_label = "💡 Simplified Notes" if current_emo == "Frustrated" else "Simplified Notes"
-        t1, t2 = st.tabs(["🖥️ Desktop View", tab_label])
+    with col_main:
+        t1, t2 = st.tabs(["🖥️ Desktop Share", "📖 Adaptive Scaffolding"])
         
         with t1:
-            remote_control_interface()
-            
+            st.write("Share your IGCSE study materials here:")
+            js_share = """
+            <div style="background: #1a1a2e; padding: 10px; border-radius: 10px; border: 1px solid #ff00ff;">
+                <button id="s" style="background:#ff00ff; color:white; border:none; padding:10px; border-radius:5px; width:100%; cursor:pointer;">🌐 Start Desktop Sharing</button>
+                <video id="v" autoplay playsinline style="width:100%; margin-top:10px; border-radius:5px;"></video>
+            </div>
+            <script>
+            const btn = document.getElementById('s'); const video = document.getElementById('v');
+            btn.onclick = async () => {
+                const stream = await navigator.mediaDevices.getDisplayMedia({video: true});
+                video.srcObject = stream;
+            };
+            </script>
+            """
+            components.html(js_share, height=400)
+
         with t2:
-            if current_emo == "Frustrated":
-                st.subheader("📖 Plant Nutrition: Key Concepts")
+            if status == "Frustrated":
                 st.markdown("""
-                * **The Goal:** Plants need light and green chlorophyll to make food (starch).
-                * **The Process:** Boil a leaf in alcohol to remove color, then use **Iodine**.
-                * **Blue/Black Color:** Starch is found (Light was present).
-                * **Brown Color:** No starch (No light or no chlorophyll).
-                """)
-                st.toast("Lumina has simplified the content!", icon="💡")
+                <div class="scaffold-card">
+                    <h3>🤖 Lumina Simplified Guide: Photosynthesis</h3>
+                    <p><b>1. Simple Definition:</b> Plants make food using sunlight.</p>
+                    <p><b>2. Key Ingredient:</b> Chlorophyll (The green stuff).</p>
+                    <p><b>3. The Test:</b> Starch turns <b>Iodine Blue/Black</b>.</p>
+                    <hr style="border-color:#ff00ff;">
+                    <p><small>Scaffolding level: High (Simplified for cognitive ease)</small></p>
+                </div>
+                """, unsafe_allow_html=True)
             else:
-                st.info("The tracker is active. Notes will generate here if you appear confused while studying.")
+                st.info("System is monitoring. Scaffolding will generate here if you need help.")
 
-    st.divider()
-    st.caption("Puteri Aisyah Sofia | ID: 25014776 | MSc Applied Computing | UTP | Al-Khor, Qatar")
-
-if __name__ == "__main__":
-    run()
+# --- 6. FOOTER ---
+st.write("---")
+st.caption("Lumina AI Framework | UTP Applied Computing | Doha, Qatar")
