@@ -55,26 +55,6 @@ IGCSE_TOPICS = {
     }
 }
 
-# SAMPLE TEST DATA
-SAMPLE_TESTS = {
-    "Vertebrates (Science)": {
-        "text": "Vertebrates are animals that have a backbone. The five main types of vertebrates are fish, amphibians, reptiles, birds, and mammals. All vertebrates have a spine that protects their spinal cord.",
-        "topic": "vertebrates"
-    },
-    "Pythagoras Theorem (Math)": {
-        "text": "The Pythagoras theorem states that in a right-angled triangle, the square of the hypotenuse is equal to the sum of the squares of the other two sides. It is written as a² + b² = c², where c is the hypotenuse. This theorem is used to find missing side lengths in triangles.",
-        "topic": "pythagoras"
-    },
-    "Poetry Analysis (English)": {
-        "text": "Poetry is a form of literature that uses language to express emotions and ideas. A poem often has rhythm, rhyme, and imagery. Key elements of poetry include metaphor, simile, alliteration, and personification. Reading poems helps develop critical thinking and emotional understanding.",
-        "topic": "poetry"
-    },
-    "Pemahaman (Bahasa Melayu)": {
-        "text": "Budaya adalah cara hidup yang dimiliki oleh sekelompok masyarakat. Budaya merangkumi nilai-nilai, kepercayaan, adat istiadat, dan tradisi yang diwariskan turun temurun. Setiap budaya memiliki ciri-ciri unik yang membedakannya dari budaya lain. Pemahaman budaya membantu kita menghargai keragaman dan memperkuat identiti sosial.",
-        "topic": "pemahaman"
-    }
-}
-
 # INITIALIZE SESSION STATES
 if 'is_frustrated' not in st.session_state:
     st.session_state.is_frustrated = False
@@ -551,57 +531,6 @@ with col_right:
                 st.warning("⚠️ Could not auto-detect topic. AI simplification will be used.")
         else:
             st.info("⏳ Waiting for OCR extraction... Extract text from your screen above.")
-        
-        st.markdown("---")
-        st.subheader("🧪 Quick Test Samples")
-        
-        col_test1, col_test2 = st.columns(2)
-        
-        with col_test1:
-            if st.button("🔬 Vertebrates (Science)", use_container_width=True):
-                st.session_state.extracted_text = SAMPLE_TESTS["Vertebrates (Science)"]["text"]
-                subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
-                st.session_state.detected_topic = topic
-                st.session_state.detected_subject = subject
-                st.session_state.youtube_link = youtube_link
-                st.success("✅ Vertebrates sample loaded!")
-                st.rerun()
-            
-            if st.button("📐 Pythagoras (Math)", use_container_width=True):
-                st.session_state.extracted_text = SAMPLE_TESTS["Pythagoras Theorem (Math)"]["text"]
-                subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
-                st.session_state.detected_topic = topic
-                st.session_state.detected_subject = subject
-                st.session_state.youtube_link = youtube_link
-                st.success("✅ Pythagoras sample loaded!")
-                st.rerun()
-        
-        with col_test2:
-            if st.button("📖 Poetry (English)", use_container_width=True):
-                st.session_state.extracted_text = SAMPLE_TESTS["Poetry Analysis (English)"]["text"]
-                subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
-                st.session_state.detected_topic = topic
-                st.session_state.detected_subject = subject
-                st.session_state.youtube_link = youtube_link
-                st.success("✅ Poetry sample loaded!")
-                st.rerun()
-            
-            if st.button("📚 Pemahaman (BM)", use_container_width=True):
-                st.session_state.extracted_text = SAMPLE_TESTS["Pemahaman (Bahasa Melayu)"]["text"]
-                subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
-                st.session_state.detected_topic = topic
-                st.session_state.detected_subject = subject
-                st.session_state.youtube_link = youtube_link
-                st.success("✅ Pemahaman sample loaded!")
-                st.rerun()
-        
-        st.markdown("---")
-        with st.expander("🔧 Debug Information"):
-            st.write(f"**Session State 'extracted_text':** {len(st.session_state.extracted_text)} characters")
-            st.write(f"**Text Content:** {st.session_state.extracted_text[:200] if st.session_state.extracted_text else 'EMPTY'}")
-            st.write(f"**Detected Topic:** {st.session_state.detected_topic if st.session_state.detected_topic else 'NONE'}")
-            st.write(f"**YouTube Link:** {st.session_state.youtube_link if st.session_state.youtube_link else 'NONE'}")
-            st.write(f"**Transformer Model:** {'✅ Yes (BART)' if HAS_TRANSFORMERS else '❌ No (fallback)'}")
     
     # ====== TAB 2: ADAPTIVE NOTES ======
     with tab2:
@@ -678,13 +607,24 @@ with col_right:
                         <li>Go to the <b>"Shared Material"</b> tab</li>
                         <li>Click <b>"Cast Screen"</b> to show your learning content</li>
                         <li>Click <b>"Extract Text"</b> to read what's on screen</li>
-                        <li>Or select a <b>Quick Test Sample</b></li>
                         <li>Return to this tab while looking frustrated</li>
                     </ol>
                 </div>
                 """, unsafe_allow_html=True)
             
             col_btn1, col_btn2, col_btn3 = st.columns(3)
+            
+            with col_btn1:
+                if st.button("✅ I Understand!", key="understand_btn", use_container_width=True):
+                    st.session_state.is_frustrated = False
+                    st.session_state.frustration_confirmed = True
+                    st.session_state.test_logs.append({
+                        "Timestamp": datetime.now().strftime("%H:%M:%S"),
+                        "Event": "User Confirmed Understanding",
+                        "Topic": st.session_state.detected_topic or "Unknown",
+                        "Response": "Scaffolding Cleared"
+                    })
+                    st.rerun()
             
             with col_btn2:
                 if st.button("🆘 Need Help", key="help_btn", use_container_width=True):
@@ -706,6 +646,16 @@ with col_right:
                         """, unsafe_allow_html=True)
                     else:
                         st.error("❌ Could not find YouTube link for this topic.")
+            
+            with col_btn3:
+                if st.button("📧 Email Teacher", key="email_btn", use_container_width=True):
+                    st.session_state.test_logs.append({
+                        "Timestamp": datetime.now().strftime("%H:%M:%S"),
+                        "Event": "Teacher Notification Sent",
+                        "Topic": st.session_state.detected_topic or "Unknown",
+                        "Status": "Pending Response"
+                    })
+                    st.success("✅ Your teacher has been notified!")
         
         # STATE: FRUSTRATED & CONFIRMED (SUCCESS)
         elif st.session_state.is_frustrated and st.session_state.frustration_confirmed:
@@ -818,10 +768,9 @@ st.sidebar.markdown("""
     ✅ Topic Detection: Ready<br>
     ✅ AI Simplification: Ready<br>
     ✅ YouTube Links: Ready<br>
-    ✅ Quick Tests: Ready<br>
     ✅ Scaffolding: Enabled<br>
     <br>
     🔗 Integration: @DaniyalAhmedKhan1234<br>
-    <i>Version 4.4 | Lumina AI</i>
+    <i>Version 4.5 | Lumina AI</i>
 </div>
 """, unsafe_allow_html=True)
