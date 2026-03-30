@@ -16,20 +16,27 @@ IGCSE_TOPICS = {
         "calculus": "https://www.youtube.com/watch?v=WUvTyaaNkzM",
         "statistics": "https://www.youtube.com/watch?v=xxpc-SDeal4",
         "probability": "https://www.youtube.com/watch?v=uzkc-qNVoOk",
+        "quadratic": "https://www.youtube.com/watch?v=DxGearozly0",
     },
     "Science": {
         "biology": "https://www.youtube.com/watch?v=V0JGXWpB6ZQ",
         "chemistry": "https://www.youtube.com/watch?v=roQOlHxANxY",
         "physics": "https://www.youtube.com/watch?v=0xALCVJzowA",
+        "vertebrate": "https://www.youtube.com/watch?v=lkwsZuUol_A",
         "vertebrates": "https://www.youtube.com/watch?v=lkwsZuUol_A",
         "photosynthesis": "https://www.youtube.com/watch?v=VLZvIqX_Q-k",
         "reproduction": "https://www.youtube.com/watch?v=Tb_6dZ8Vy5k",
+        "respiration": "https://www.youtube.com/watch?v=mVJZEWflWQc",
+        "genetics": "https://www.youtube.com/watch?v=ySE9kVohH90",
+        "osmosis": "https://www.youtube.com/watch?v=SJctAUw5NaI",
+        "enzyme": "https://www.youtube.com/watch?v=HGU9xKGLWEg",
     },
     "English": {
         "grammar": "https://www.youtube.com/watch?v=MFQhB73iUUk",
         "literature": "https://www.youtube.com/watch?v=lV6w5j8ChiI",
-        "essay writing": "https://www.youtube.com/watch?v=jH1c3sFCVdE",
+        "essay": "https://www.youtube.com/watch?v=jH1c3sFCVdE",
         "comprehension": "https://www.youtube.com/watch?v=T0eEiXVVVY4",
+        "writing": "https://www.youtube.com/watch?v=jH1c3sFCVdE",
     },
     "Bahasa Melayu": {
         "tata bahasa": "https://www.youtube.com/watch?v=z8x5BvPZ7Fc",
@@ -52,13 +59,15 @@ if 'detected_topic' not in st.session_state:
     st.session_state.detected_topic = None
 if 'detected_subject' not in st.session_state:
     st.session_state.detected_subject = None
-if 'simplified_content' not in st.session_state:
-    st.session_state.simplified_content = None
 
 def detect_igcse_topic(text):
     """Detect IGCSE subject and topic from extracted text"""
+    if not text:
+        return None, None, None
+    
     text_lower = text.lower()
     
+    # Check for matches
     for subject, topics in IGCSE_TOPICS.items():
         for topic, youtube_link in topics.items():
             if topic in text_lower:
@@ -68,74 +77,115 @@ def detect_igcse_topic(text):
 
 def simplify_content(text, topic):
     """Generate simplified content based on detected topic"""
-    text_preview = text[:300] if text else "No content extracted"
     
     simplifications = {
-        "vertebrates": {
-            "title": "What Are Vertebrates? 🦁",
+        "vertebrate": {
+            "title": "🦁 Vertebrates Explained Simply",
             "bullets": [
-                "Vertebrates have a BACKBONE (spine)",
-                "Five types: Fish, Amphibians, Reptiles, Birds, Mammals",
-                "Backbone protects the spinal cord",
-                "They are the largest animals on Earth"
+                "✅ Vertebrates have a BACKBONE (spine)",
+                "✅ Five main types: Fish, Amphibians, Reptiles, Birds, Mammals",
+                "✅ The backbone protects the spinal cord",
+                "✅ Examples: Dogs, cats, snakes, eagles, sharks",
+                "✅ Humans are also vertebrates!"
             ],
-            "tip": "Remember: VERTEBRA = has a spine! 🦴"
+            "tip": "VERTEBRA = has a backbone! 🦴 That's the main difference from invertebrates."
+        },
+        "vertebrates": {
+            "title": "🦁 Vertebrates Explained Simply",
+            "bullets": [
+                "✅ Vertebrates have a BACKBONE (spine)",
+                "✅ Five main types: Fish, Amphibians, Reptiles, Birds, Mammals",
+                "✅ The backbone protects the spinal cord",
+                "✅ Examples: Dogs, cats, snakes, eagles, sharks",
+                "✅ Humans are also vertebrates!"
+            ],
+            "tip": "VERTEBRA = has a backbone! 🦴 That's the main difference from invertebrates."
         },
         "photosynthesis": {
-            "title": "Photosynthesis Explained 🌱",
+            "title": "🌱 Photosynthesis Made Easy",
             "bullets": [
-                "Plants make food using SUNLIGHT ☀️",
-                "They take in Carbon Dioxide (CO₂) from air",
-                "They take in Water (H₂O) from soil",
-                "They make Glucose (sugar) & release Oxygen"
+                "☀️ Plants use SUNLIGHT to make food",
+                "💨 They take in Carbon Dioxide (CO₂) from the air",
+                "💧 They take in Water (H₂O) from the soil",
+                "🍎 They make Glucose (sugar) for energy",
+                "💨 They release Oxygen for us to breathe"
             ],
-            "tip": "Simple version: Light + Water + CO₂ = Food + Oxygen ✨"
+            "tip": "Remember: Light + Water + CO₂ = Food + Oxygen ✨"
         },
         "algebra": {
-            "title": "Understanding Algebra 📐",
+            "title": "📐 Algebra Simplified",
             "bullets": [
-                "Algebra uses LETTERS (like x, y) to represent unknown numbers",
-                "Solve equations by GETTING THE LETTER ALONE",
-                "Whatever you do to one side, do to the other",
-                "Check your answer by putting it back in"
+                "🔤 Algebra uses LETTERS (x, y, z) for unknown numbers",
+                "🔍 Your job: Find what the letter equals",
+                "⚖️ Whatever you do to one side, do to the other",
+                "✅ Check your answer by putting it back in",
+                "🧩 Example: If x + 5 = 12, then x = 7"
             ],
-            "tip": "Algebra is like solving a mystery - find what x equals! 🔍"
+            "tip": "Think of algebra like solving a mystery! 🔍 What number is hiding?"
         },
         "geometry": {
-            "title": "Geometry Basics 📏",
+            "title": "📏 Geometry Basics",
             "bullets": [
-                "Geometry is about SHAPES and ANGLES",
-                "Know your shapes: triangles, squares, circles, etc.",
-                "Angles: 90° is RIGHT, 180° is STRAIGHT, 360° is FULL",
-                "Perimeter = distance AROUND, Area = space INSIDE"
+                "📐 Geometry is about SHAPES and ANGLES",
+                "🔺 Know your shapes: triangles, squares, circles, rectangles",
+                "📍 Angles: 90° is RIGHT angle, 180° is STRAIGHT line, 360° is FULL circle",
+                "📏 Perimeter = distance AROUND a shape",
+                "📦 Area = space INSIDE a shape"
             ],
-            "tip": "Visualize the shape - draw it out! ✏️"
+            "tip": "Draw it out! Visualizing shapes helps you understand. ✏️"
         },
         "chemistry": {
-            "title": "Chemistry Made Simple ⚗️",
+            "title": "⚗️ Chemistry Basics",
             "bullets": [
-                "Chemistry = study of substances and reactions",
-                "ATOMS combine to make MOLECULES",
-                "Chemical reactions create NEW substances",
-                "Everything is made of ELEMENTS"
+                "🧪 Chemistry = study of substances and reactions",
+                "⚛️ ATOMS are tiny building blocks",
+                "🔗 Atoms join to make MOLECULES",
+                "💥 Chemical reactions make NEW substances",
+                "🌍 Everything is made from ELEMENTS"
             ],
-            "tip": "Think: mixing ingredients in cooking = chemistry! 👨‍🍳"
+            "tip": "Think: Mixing ingredients in cooking = chemistry! 👨‍🍳"
+        },
+        "respiration": {
+            "title": "🫁 Respiration Explained",
+            "bullets": [
+                "💨 Respiration is how cells get ENERGY from food",
+                "🫁 Breathing brings oxygen into your body",
+                "⚡ Cells use oxygen to break down glucose",
+                "💪 This creates energy (ATP) for your body",
+                "💨 Your body releases carbon dioxide as waste"
+            ],
+            "tip": "Respiration ≠ Breathing. Respiration is inside cells! ⚛️"
+        },
+        "enzyme": {
+            "title": "🧬 Enzymes Simplified",
+            "bullets": [
+                "⚙️ Enzymes are HELPERS that speed up reactions",
+                "🎯 Each enzyme works on ONE specific substrate",
+                "🌡️ Heat can denature (break) enzymes",
+                "📊 Enzymes work best at certain temperatures",
+                "🔑 Think: Key fits into lock - enzyme fits into substrate"
+            ],
+            "tip": "Enzymes = biological catalysts that speed things up! ⚡"
         }
     }
     
-    return simplifications.get(
-        topic,
-        {
-            "title": f"Understanding {topic.title()} 📚",
-            "bullets": [
-                f"Topic: {topic}",
-                f"Content: {text_preview}...",
-                "Break it into smaller parts",
-                "Ask for help from your teacher"
-            ],
-            "tip": "You can do this! Take it one step at a time. 💪"
-        }
-    )
+    # Try to find a matching simplification
+    for key, value in simplifications.items():
+        if key in topic.lower():
+            return value
+    
+    # Default if no match
+    return {
+        "title": f"📚 Understanding {topic.title()}",
+        "bullets": [
+            f"This is about {topic.title()}",
+            "Break the concept into smaller parts",
+            "Start with the basics",
+            "Build up to more complex ideas",
+            "Ask your teacher for help with tricky parts"
+        ],
+        "tip": "You're doing great! Keep learning step by step. 💪"
+    }
 
 def apply_lumina_theme():
     bg_url = "https://raw.githubusercontent.com/AisyahSofia/Lumina-AI/main/classroom_bg.jpg"
@@ -208,9 +258,9 @@ with col_left:
         // IMPROVED DEBOUNCING - Stricter threshold
         let frustrationFrameCount = 0;
         let neutralFrameCount = 0;
-        const FRUSTRATION_THRESHOLD = 90;  // 3 seconds at 30fps (was 60)
-        const NEUTRAL_THRESHOLD = 45;      // 1.5 seconds to confirm neutral (was 30)
-        const CONFIDENCE_THRESHOLD = 0.82; // Increased to 82% (was 75)
+        const FRUSTRATION_THRESHOLD = 90;
+        const NEUTRAL_THRESHOLD = 45;
+        const CONFIDENCE_THRESHOLD = 0.82;
         
         let currentState = "neutral";
         let triggerLocked = false;
@@ -259,18 +309,15 @@ with col_left:
             labelDiv.innerHTML = "Status: " + best.className;
             frameDiv.innerHTML = currentState.toUpperCase() + " Frames: " + (currentState === "frustrated" ? frustrationFrameCount : neutralFrameCount) + "/" + (currentState === "frustrated" ? FRUSTRATION_THRESHOLD : NEUTRAL_THRESHOLD);
             
-            // STRICT DEBOUNCING - Only respond to sustained expressions
             if(best.className === "Frustrated" && best.probability > CONFIDENCE_THRESHOLD) {
-                neutralFrameCount = 0; // Reset neutral counter
+                neutralFrameCount = 0;
                 frustrationFrameCount++;
                 labelDiv.style.color = "#FF6B6B";
                 robotDiv.innerHTML = "😟";
                 currentState = "frustrated";
                 
-                // Only trigger ONCE after sustained frustration
                 if(frustrationFrameCount >= FRUSTRATION_THRESHOLD && !triggerLocked) {
                     triggerLocked = true;
-                    console.log("FRUSTRATION TRIGGERED - Sending signal to Streamlit");
                     window.parent.postMessage({
                         type: 'streamlit:set_component_value', 
                         value: true, 
@@ -278,14 +325,14 @@ with col_left:
                     }, "*");
                 }
             } else {
-                frustrationFrameCount = 0; // Reset frustration counter
+                frustrationFrameCount = 0;
                 neutralFrameCount++;
                 
                 if(neutralFrameCount >= NEUTRAL_THRESHOLD) {
                     labelDiv.style.color = "#00FF7F";
                     robotDiv.innerHTML = "😊";
                     currentState = "neutral";
-                    triggerLocked = false; // Allow re-triggering when back to neutral
+                    triggerLocked = false;
                 }
             }
         }
@@ -307,7 +354,6 @@ with col_left:
     """
     detect_signal = components.html(tm_html, height=750)
     
-    # Handle trigger from facial detection
     if detect_signal and not st.session_state.is_frustrated:
         st.session_state.is_frustrated = True
         st.session_state.frustration_confirmed = False
@@ -362,18 +408,24 @@ with col_right:
                     const canvas = document.createElement('canvas');
                     canvas.width = video.videoWidth; 
                     canvas.height = video.videoHeight;
-                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0);
                     
                     try {
                         const result = await Tesseract.recognize(canvas, 'eng');
-                        const extractedText = result.data.text;
-                        console.log("Extracted text:", extractedText);
-                        window.parent.postMessage({
-                            type: 'streamlit:set_component_value', 
-                            value: extractedText, 
-                            key: 'ocr_bridge'
-                        }, "*");
-                        statusDiv.innerHTML = "✅ Text extracted! " + extractedText.length + " characters found.";
+                        const extractedText = result.data.text || "";
+                        console.log("OCR Result:", extractedText);
+                        
+                        if(extractedText && extractedText.trim().length > 0) {
+                            window.parent.postMessage({
+                                type: 'streamlit:set_component_value', 
+                                value: extractedText, 
+                                key: 'ocr_bridge'
+                            }, "*");
+                            statusDiv.innerHTML = "✅ Text extracted! " + extractedText.length + " characters found.";
+                        } else {
+                            statusDiv.innerHTML = "⚠️ No text detected. Try clearer screen or better lighting.";
+                        }
                     } catch(e) {
                         statusDiv.innerHTML = "❌ Extraction failed: " + e.message;
                     }
@@ -383,8 +435,8 @@ with col_right:
         
         ocr_return = components.html(ocr_html, height=500)
         
-        # Capture OCR text
-        if ocr_return and isinstance(ocr_return, str) and len(ocr_return) > 20:
+        # FIX: Properly capture and store OCR text
+        if ocr_return and isinstance(ocr_return, str) and len(ocr_return.strip()) > 20:
             st.session_state.extracted_text = ocr_return
             st.success(f"✅ Text extracted! ({len(ocr_return)} characters)")
             
@@ -393,10 +445,18 @@ with col_right:
             if topic:
                 st.session_state.detected_subject = subject
                 st.session_state.detected_topic = topic
-                st.session_state.simplified_content = simplify_content(ocr_return, topic)
                 st.info(f"🎯 **Detected:** {subject} - {topic.title()}")
             else:
-                st.warning("⚠️ Could not auto-detect topic. Manual simplification available.")
+                st.warning("⚠️ Could not auto-detect topic. Will use generic simplification.")
+        
+        # Debug: Show current extracted text
+        st.markdown("---")
+        with st.expander("📋 Debug: Current Extracted Text"):
+            if st.session_state.extracted_text:
+                st.write(f"**Length:** {len(st.session_state.extracted_text)} characters")
+                st.write(f"**Preview:** {st.session_state.extracted_text[:300]}")
+            else:
+                st.write("❌ No text extracted yet")
 
     with tab2:
         st.subheader("🤖 Adaptive Support Dashboard")
@@ -404,49 +464,75 @@ with col_right:
         if st.session_state.is_frustrated and not st.session_state.frustration_confirmed:
             st.warning("⚠️ **Lumina Detected Learning Barrier** - Simplification Mode Active")
             
-            if st.session_state.simplified_content:
-                content = st.session_state.simplified_content
-                st.markdown(f"""
-                <div style="background: rgba(255,20,147,0.15); padding: 30px; border-radius: 15px; border-left: 10px solid #FF1493;">
-                    <h2 style="margin-top:0; color: #FF1493;">{content['title']}</h2>
-                    <p><b>Extracted material:</b> {st.session_state.extracted_text[:200]}...</p>
-                    <hr style="opacity: 0.3;">
-                    <h3>📌 Easy Steps:</h3>
-                    <ul style="font-size: 1.1rem; line-height: 2;">
-                """, unsafe_allow_html=True)
+            # CHECK IF WE HAVE REAL EXTRACTED TEXT
+            has_text = st.session_state.extracted_text and len(st.session_state.extracted_text.strip()) > 10
+            
+            if has_text:
+                # Detect topic from the extracted text
+                subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
                 
-                for bullet in content['bullets']:
-                    st.markdown(f"<li>{bullet}</li>", unsafe_allow_html=True)
-                
-                st.markdown(f"""
-                    </ul>
-                    <hr style="opacity: 0.3;">
-                    <p style="font-size: 1.1rem; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; font-style: italic;">
-                        💡 <b>{content['tip']}</b>
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
+                if topic:
+                    # Generate simplified content
+                    content = simplify_content(st.session_state.extracted_text, topic)
+                    
+                    st.markdown(f"""
+                    <div style="background: rgba(255,20,147,0.15); padding: 30px; border-radius: 15px; border-left: 10px solid #FF1493;">
+                        <h2 style="margin-top:0; color: #FF1493;">{content['title']}</h2>
+                        <p><b>📄 You were reading about:</b> {st.session_state.extracted_text[:150]}...</p>
+                        <hr style="opacity: 0.3;">
+                        <h3>📌 Here's the Simple Version:</h3>
+                        <ul style="font-size: 1.1rem; line-height: 2;">
+                    """, unsafe_allow_html=True)
+                    
+                    for bullet in content['bullets']:
+                        st.markdown(f"<li>{bullet}</li>", unsafe_allow_html=True)
+                    
+                    st.markdown(f"""
+                        </ul>
+                        <hr style="opacity: 0.3;">
+                        <p style="font-size: 1.1rem; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; font-style: italic;">
+                            💡 <b>{content['tip']}</b>
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div style="background: rgba(255,20,147,0.15); padding: 30px; border-radius: 15px; border-left: 10px solid #FF1493;">
+                        <h2 style="margin-top:0; color: #FF1493;">📖 Simplification Mode</h2>
+                        <p><b>Content detected:</b> {st.session_state.extracted_text[:200]}...</p>
+                        <hr style="opacity: 0.3;">
+                        <h3>📌 Tips to Understand:</h3>
+                        <ul style="font-size: 1.1rem; line-height: 2;">
+                            <li>✅ Read it slowly - one sentence at a time</li>
+                            <li>✅ Highlight or underline key words</li>
+                            <li>✅ Draw a diagram or picture of what you read</li>
+                            <li>✅ Ask questions - no question is silly!</li>
+                            <li>✅ Try to explain it in your own words</li>
+                        </ul>
+                        <hr style="opacity: 0.3;">
+                        <p style="font-size: 1.1rem; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; font-style: italic;">
+                            💪 <b>You've got this! Take a deep breath and try again.</b>
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
             else:
+                st.error("❌ **No text extracted yet!**")
                 st.markdown("""
-                <div style="background: rgba(255,20,147,0.15); padding: 25px; border-radius: 15px; border-left: 10px solid #FF1493;">
-                    <h3 style="margin-top:0;">📖 Content Detected</h3>
-                    <p><b>Material:</b> """ + (st.session_state.extracted_text[:200] + "..." if st.session_state.extracted_text else "Waiting for text extraction...") + """</p>
-                    <hr style="opacity: 0.3;">
-                    <p><b>Steps to understand:</b></p>
-                    <ul>
-                        <li>Read slowly, one sentence at a time</li>
-                        <li>Highlight the key words</li>
-                        <li>Draw a picture or diagram</li>
-                        <li>Ask for help!</li>
-                    </ul>
-                    <p style="margin-top: 20px; font-style: italic; opacity: 0.9;">💪 <b>You've got this! Take a deep breath.</b></p>
+                <div style="background: rgba(255,100,100,0.15); padding: 25px; border-radius: 15px; border-left: 10px solid #FF4444;">
+                    <h3>What to do:</h3>
+                    <ol>
+                        <li>Go to the <b>"Shared Material"</b> tab</li>
+                        <li>Click <b>"Cast Screen"</b> to show your learning content</li>
+                        <li>Click <b>"Extract Text"</b> to read what's on screen</li>
+                        <li>Come back here to see the simplified version!</li>
+                    </ol>
                 </div>
                 """, unsafe_allow_html=True)
             
             col_btn1, col_btn2, col_btn3 = st.columns(3)
             
             with col_btn1:
-                if st.button("��� I Understand!", key="understand_btn", use_container_width=True):
+                if st.button("✅ I Understand!", key="understand_btn", use_container_width=True):
                     st.session_state.is_frustrated = False
                     st.session_state.frustration_confirmed = True
                     st.session_state.test_logs.append({
@@ -459,8 +545,8 @@ with col_right:
             
             with col_btn2:
                 if st.button("🆘 Need Help", key="help_btn", use_container_width=True):
-                    if st.session_state.detected_subject and st.session_state.detected_topic:
-                        youtube_link = detect_igcse_topic(st.session_state.extracted_text)[2]
+                    if st.session_state.detected_topic:
+                        subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
                         st.session_state.test_logs.append({
                             "Timestamp": datetime.now().strftime("%H:%M:%S"),
                             "Event": "Help Requested",
@@ -470,12 +556,12 @@ with col_right:
                         st.markdown(f"""
                         <div style="background: rgba(52,152,219,0.2); padding: 20px; border-radius: 15px; border-left: 5px solid #3498db;">
                             <h3>📺 Video Tutorial for {st.session_state.detected_topic.title()}</h3>
-                            <p><a href="{youtube_link}" target="_blank" style="color: #00BFFF; font-weight: bold; font-size: 1.1rem;">👉 Watch Explanation Video</a></p>
-                            <p style="opacity: 0.9;">This video explains {st.session_state.detected_topic} in an easy way. Pause and rewind as needed!</p>
+                            <p><a href="{youtube_link}" target="_blank" style="color: #00BFFF; font-weight: bold; font-size: 1.2rem;">👉 WATCH EXPLANATION VIDEO</a></p>
+                            <p style="opacity: 0.9;">This video explains {st.session_state.detected_topic} step by step. You can pause, rewind, and watch as many times as you need!</p>
                         </div>
                         """, unsafe_allow_html=True)
                     else:
-                        st.info("📧 Please extract text first to get topic-specific help.")
+                        st.info("ℹ️ Extract text first so I can find the best video for your topic!")
             
             with col_btn3:
                 if st.button("📧 Email Teacher", key="email_btn", use_container_width=True):
@@ -488,16 +574,28 @@ with col_right:
                     st.success("✅ Your teacher has been notified! They'll contact you soon.")
         
         elif st.session_state.is_frustrated and st.session_state.frustration_confirmed:
-            st.success("✅ Great! Ready for more content.")
+            st.success("✅ Great job! You understood the concept.")
             if st.button("🔄 Reset & Continue Learning"):
                 st.session_state.is_frustrated = False
                 st.session_state.frustration_confirmed = False
-                st.session_state.simplified_content = None
                 st.session_state.extracted_text = ""
+                st.session_state.detected_topic = None
                 st.rerun()
         
         else:
-            st.info("✨ Status: **Monitoring Mode Active**. When frustrated, your content will simplify automatically.")
+            st.info("✨ **Status: Monitoring Mode Active**")
+            st.markdown("""
+            <div style="background: rgba(100,200,255,0.1); padding: 20px; border-radius: 10px; border-left: 5px solid #64c8ff;">
+                <p><b>How I Help You:</b></p>
+                <ul style="font-size: 1rem; line-height: 1.8;">
+                    <li>🎬 Watch your face while you study</li>
+                    <li>😊 When I see frustration, I'll simplify things for you</li>
+                    <li>📄 I'll read text from your screen</li>
+                    <li>✨ I'll break hard topics into easy bullet points</li>
+                    <li>📺 I'll find helpful videos for you</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
 
     with tab3:
         st.subheader("📊 System Validation Data")
@@ -537,7 +635,12 @@ st.sidebar.divider()
 
 with st.sidebar.expander("⚙️ Advanced Settings"):
     st.markdown("**Supported Subjects:**")
-    st.markdown("✅ IGCSE Math\n✅ IGCSE Science (Biology, Chemistry, Physics)\n✅ IGCSE English\n✅ Bahasa Melayu")
+    st.markdown("""
+    ✅ IGCSE Math (Algebra, Geometry, Trigonometry, Calculus, Statistics)
+    ✅ IGCSE Science (Biology, Chemistry, Physics, Vertebrates, Photosynthesis, Enzymes)
+    ✅ IGCSE English (Grammar, Literature, Essay, Comprehension)
+    ✅ Bahasa Melayu (Tata Bahasa, Sastra, Penulisan)
+    """)
     
     col1, col2 = st.columns(2)
     with col1:
@@ -548,7 +651,7 @@ with st.sidebar.expander("⚙️ Advanced Settings"):
         if st.button("🔄 Reset State"):
             st.session_state.is_frustrated = False
             st.session_state.frustration_confirmed = False
-            st.session_state.simplified_content = None
+            st.session_state.extracted_text = ""
             st.rerun()
 
 st.sidebar.divider()
@@ -556,10 +659,11 @@ st.sidebar.markdown("""
 <div style="font-size: 0.85rem; opacity: 0.7;">
     <b>System Status:</b><br>
     ✅ Perception Engine: Ready<br>
-    ✅ Text Extraction: Ready<br>
+    ✅ Text Extraction (Tesseract): Ready<br>
     ✅ IGCSE Topic Detection: Ready<br>
-    ✅ Scaffolding: Enabled<br>
+    ✅ Adaptive Scaffolding: Enabled<br>
+    ✅ YouTube Integration: Ready<br>
     <br>
-    <i>Version 3.0 | Built with ❤️ for Inclusive Education</i>
+    <i>Version 3.1 | Built with ❤️ for Inclusive Education</i>
 </div>
 """, unsafe_allow_html=True)
