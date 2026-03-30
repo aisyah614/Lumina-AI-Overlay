@@ -1,5 +1,7 @@
-protobuf==3.20.3
-tensorflow-cpu==2.15.0
-opencv-python-headless
+streamlit
 streamlit-webrtc
-av
+opencv-python-headless
+deepface
+tf-keras
+pandas
+matplotlib
