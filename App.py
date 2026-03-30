@@ -686,18 +686,6 @@ with col_right:
             
             col_btn1, col_btn2, col_btn3 = st.columns(3)
             
-            with col_btn1:
-                if st.button("✅ I Understand!", key="understand_btn", use_container_width=True):
-                    st.session_state.is_frustrated = False
-                    st.session_state.frustration_confirmed = True
-                    st.session_state.test_logs.append({
-                        "Timestamp": datetime.now().strftime("%H:%M:%S"),
-                        "Event": "User Confirmed Understanding",
-                        "Topic": st.session_state.detected_topic or "Unknown",
-                        "Response": "Scaffolding Cleared"
-                    })
-                    st.rerun()
-            
             with col_btn2:
                 if st.button("🆘 Need Help", key="help_btn", use_container_width=True):
                     subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
