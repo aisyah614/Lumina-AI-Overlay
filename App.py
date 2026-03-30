@@ -13,6 +13,7 @@ except:
 
 st.set_page_config(page_title="Lumina AI | Research Framework", layout="wide", page_icon="🤖")
 
+# IGCSE TOPICS DATABASE
 IGCSE_TOPICS = {
     "Math": {
         "algebra": "https://www.youtube.com/watch?v=NybHckSEQq4",
@@ -54,7 +55,7 @@ IGCSE_TOPICS = {
     }
 }
 
-# Sample test data
+# SAMPLE TEST DATA
 SAMPLE_TESTS = {
     "Vertebrates (Science)": {
         "text": "Vertebrates are animals that have a backbone. The five main types of vertebrates are fish, amphibians, reptiles, birds, and mammals. All vertebrates have a spine that protects their spinal cord.",
@@ -74,6 +75,7 @@ SAMPLE_TESTS = {
     }
 }
 
+# INITIALIZE SESSION STATES
 if 'is_frustrated' not in st.session_state:
     st.session_state.is_frustrated = False
 if 'test_logs' not in st.session_state:
@@ -91,7 +93,9 @@ if 'ai_simplified_bullets' not in st.session_state:
 if 'youtube_link' not in st.session_state:
     st.session_state.youtube_link = None
 
+# ====== UTILITY FUNCTIONS ======
 def detect_igcse_topic(text):
+    """Detect IGCSE subject and topic from text"""
     if not text:
         return None, None, None
     text_lower = text.lower()
@@ -102,6 +106,7 @@ def detect_igcse_topic(text):
     return None, None, None
 
 def simplify_with_ai(text):
+    """Simplify text using transformer model or fallback"""
     if not text or len(text.strip()) < 20:
         return ["Unable to process text. Please provide more content."]
     
@@ -129,6 +134,7 @@ def simplify_with_ai(text):
         return fallback_simplify(text)
 
 def fallback_simplify(text):
+    """Fallback simplification without AI"""
     bullets = []
     sentences = text.replace('!', '.').replace('?', '.').split('.')
     sentences = [s.strip() for s in sentences if s.strip() and len(s.strip()) > 15]
@@ -146,6 +152,7 @@ def fallback_simplify(text):
     return bullets if bullets else ["Unable to simplify text at this time."]
 
 def simplify_content(text, topic):
+    """Get predefined simplification for detected topic"""
     simplifications = {
         "vertebrate": {
             "title": "🦁 Vertebrates Explained Simply",
@@ -287,6 +294,7 @@ def simplify_content(text, topic):
     }
 
 def apply_lumina_theme():
+    """Apply Lumina AI theme styling"""
     bg_url = "https://raw.githubusercontent.com/AisyahSofia/Lumina-AI/main/classroom_bg.jpg"
     st.markdown(f"""
     <style>
@@ -317,8 +325,10 @@ def apply_lumina_theme():
     </style>
     """, unsafe_allow_html=True)
 
+# ====== APPLY THEME ======
 apply_lumina_theme()
 
+# ====== HEADER ======
 st.markdown("""
     <div style="border: 2px solid #ffffff; border-radius: 15px; padding: 20px; text-align: center; background: rgba(255, 255, 255, 0.05); margin-bottom: 30px;">
         <h1 style="margin: 0; font-size: 2.2rem;">Lumina AI</h1>
@@ -326,8 +336,10 @@ st.markdown("""
     </div>
     """, unsafe_allow_html=True)
 
+# ====== MAIN LAYOUT ======
 col_left, col_right = st.columns([1.4, 2])
 
+# ====== LEFT COLUMN: FACIAL PERCEPTION ======
 with col_left:
     st.subheader("👤 LUMINA AI")
     
@@ -452,9 +464,11 @@ with col_left:
         })
         st.rerun()
 
+# ====== RIGHT COLUMN: TABS ======
 with col_right:
     tab1, tab2, tab3 = st.tabs(["🖥️ Shared Material", "💡 Adaptive Notes", "📊 Research Logs"])
     
+    # ====== TAB 1: SHARED MATERIAL ======
     with tab1:
         st.markdown("### 📱 Learning Material Capture")
         
@@ -588,18 +602,19 @@ with col_right:
             st.write(f"**Detected Topic:** {st.session_state.detected_topic if st.session_state.detected_topic else 'NONE'}")
             st.write(f"**YouTube Link:** {st.session_state.youtube_link if st.session_state.youtube_link else 'NONE'}")
             st.write(f"**Transformer Model:** {'✅ Yes (BART)' if HAS_TRANSFORMERS else '❌ No (fallback)'}")
-
-       with tab2:
+    
+    # ====== TAB 2: ADAPTIVE NOTES ======
+    with tab2:
         st.subheader("🤖 Adaptive Support Dashboard")
         
         debug_text = st.session_state.extracted_text if st.session_state.extracted_text else ""
         debug_has_text = len(debug_text.strip()) > 10 if debug_text else False
         
+        # STATE: FRUSTRATED & NOT CONFIRMED
         if st.session_state.is_frustrated and not st.session_state.frustration_confirmed:
             st.warning("⚠️ **Lumina Detected Learning Barrier** - Simplification Mode Active")
             
             if debug_has_text:
-                # Re-detect topic if not already detected
                 if not st.session_state.detected_topic:
                     subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
                     st.session_state.detected_subject = subject
@@ -675,11 +690,6 @@ with col_right:
                 if st.button("✅ I Understand!", key="understand_btn", use_container_width=True):
                     st.session_state.is_frustrated = False
                     st.session_state.frustration_confirmed = True
-                    st.session_state.extracted_text = ""
-                    st.session_state.detected_topic = None
-                    st.session_state.detected_subject = None
-                    st.session_state.youtube_link = None
-                    st.session_state.ai_simplified_bullets = None
                     st.session_state.test_logs.append({
                         "Timestamp": datetime.now().strftime("%H:%M:%S"),
                         "Event": "User Confirmed Understanding",
@@ -707,7 +717,7 @@ with col_right:
                         </div>
                         """, unsafe_allow_html=True)
                     else:
-                        st.error("❌ Could not find YouTube link for this topic. Please extract clear text from your learning material.")
+                        st.error("❌ Could not find YouTube link for this topic.")
             
             with col_btn3:
                 if st.button("📧 Email Teacher", key="email_btn", use_container_width=True):
@@ -719,6 +729,7 @@ with col_right:
                     })
                     st.success("✅ Your teacher has been notified!")
         
+        # STATE: FRUSTRATED & CONFIRMED (SUCCESS)
         elif st.session_state.is_frustrated and st.session_state.frustration_confirmed:
             st.success("✅ Great job! You understood the concept.")
             st.markdown("""
@@ -743,6 +754,7 @@ with col_right:
                     st.session_state.ai_simplified_bullets = None
                     st.rerun()
         
+        # STATE: MONITORING MODE
         else:
             st.info("✨ **Status: Monitoring Mode Active**")
             st.markdown("""
@@ -757,7 +769,8 @@ with col_right:
                 </ul>
             </div>
             """, unsafe_allow_html=True)
-            
+    
+    # ====== TAB 3: RESEARCH LOGS ======
     with tab3:
         st.subheader("📊 System Validation Data")
         
@@ -786,6 +799,7 @@ with col_right:
         else:
             st.write("📭 No events recorded yet.")
 
+# ====== SIDEBAR ======
 st.sidebar.title("🎛️ Lumina Control Panel")
 st.sidebar.markdown("**Student:** Puteri Aisyah Sofia")
 st.sidebar.markdown("**Supervisor:** AP Dr. Ibrahim Venkat")
@@ -793,7 +807,7 @@ st.sidebar.markdown("**Research Date:** " + datetime.now().strftime("%Y-%m-%d"))
 st.sidebar.divider()
 
 with st.sidebar.expander("⚙️ Advanced Settings"):
-    st.markdown("**Supported:**")
+    st.markdown("**Supported Subjects:**")
     st.markdown("✅ IGCSE Math, Science, English, Bahasa Melayu")
     
     if HAS_TRANSFORMERS:
@@ -830,6 +844,6 @@ st.sidebar.markdown("""
     ✅ Scaffolding: Enabled<br>
     <br>
     🔗 Integration: @DaniyalAhmedKhan1234<br>
-    <i>Version 4.3 | Lumina AI</i>
+    <i>Version 4.4 | Lumina AI</i>
 </div>
 """, unsafe_allow_html=True)
