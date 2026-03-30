@@ -273,7 +273,7 @@ st.markdown("""
 col_left, col_right = st.columns([1.4, 2])
 
 with col_left:
-    st.subheader("👤 Perception Engine")
+    st.subheader("👤 LUMINA AI")
     
     tm_html = """
     <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 15px; border: 2px solid white; text-align: center;">
