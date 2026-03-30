@@ -2,9 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime
-import json
 
-# Try to import transformers for text simplification
 try:
     from transformers import pipeline
     HAS_TRANSFORMERS = True
@@ -13,10 +11,8 @@ except:
     HAS_TRANSFORMERS = False
     simplifier = None
 
-# --- 1. INTERFACE & DATA SESSION CONFIG ---
 st.set_page_config(page_title="Lumina AI | Research Framework", layout="wide", page_icon="🤖")
 
-# IGCSE TOPICS DATABASE WITH YOUTUBE LINKS
 IGCSE_TOPICS = {
     "Math": {
         "algebra": "https://www.youtube.com/watch?v=NybHckSEQq4",
@@ -55,7 +51,6 @@ IGCSE_TOPICS = {
     }
 }
 
-# INITIALIZE SESSION STATES
 if 'is_frustrated' not in st.session_state:
     st.session_state.is_frustrated = False
 if 'test_logs' not in st.session_state:
@@ -72,21 +67,16 @@ if 'ai_simplified_bullets' not in st.session_state:
     st.session_state.ai_simplified_bullets = None
 
 def detect_igcse_topic(text):
-    """Detect IGCSE subject and topic from extracted text"""
     if not text:
         return None, None, None
-    
     text_lower = text.lower()
-    
     for subject, topics in IGCSE_TOPICS.items():
         for topic, youtube_link in topics.items():
             if topic in text_lower:
                 return subject, topic, youtube_link
-    
     return None, None, None
 
 def simplify_with_ai(text):
-    """Simplify text using Hugging Face transformer model"""
     if not text or len(text.strip()) < 20:
         return ["Unable to process text. Please provide more content."]
     
@@ -94,7 +84,6 @@ def simplify_with_ai(text):
         try:
             result = simplifier(text, max_length=150, min_length=50, do_sample=False)
             simplified_text = result[0]['summary_text']
-            
             sentences = simplified_text.split('. ')
             bullets = []
             for sentence in sentences:
@@ -107,9 +96,7 @@ def simplify_with_ai(text):
                         emoji = "📝"
                     elif any(word in sentence.lower() for word in ["result", "outcome"]):
                         emoji = "✅"
-                    
                     bullets.append(f"{emoji} {sentence}")
-            
             return bullets if bullets else fallback_simplify(text)
         except:
             return fallback_simplify(text)
@@ -117,7 +104,6 @@ def simplify_with_ai(text):
         return fallback_simplify(text)
 
 def fallback_simplify(text):
-    """Fallback simplification using pattern matching"""
     bullets = []
     sentences = text.replace('!', '.').replace('?', '.').split('.')
     sentences = [s.strip() for s in sentences if s.strip() and len(s.strip()) > 15]
@@ -125,20 +111,16 @@ def fallback_simplify(text):
     for sentence in sentences[:6]:
         if len(sentence) > 80:
             sentence = sentence[:77] + "..."
-        
         emoji = "📌"
         if any(word in sentence.lower() for word in ["important", "key"]):
             emoji = "⭐"
         elif any(word in sentence.lower() for word in ["example"]):
             emoji = "📝"
-        
         bullets.append(f"{emoji} {sentence}")
     
     return bullets if bullets else ["Unable to simplify text at this time."]
 
 def simplify_content(text, topic):
-    """Generate simplified content based on detected topic"""
-    
     simplifications = {
         "vertebrate": {
             "title": "🦁 Vertebrates Explained Simply",
@@ -149,7 +131,7 @@ def simplify_content(text, topic):
                 "✅ Examples: Dogs, cats, snakes, eagles, sharks",
                 "✅ Humans are also vertebrates!"
             ],
-            "tip": "VERTEBRA = has a backbone! 🦴 That's the main difference from invertebrates."
+            "tip": "VERTEBRA = has a backbone! 🦴"
         },
         "vertebrates": {
             "title": "🦁 Vertebrates Explained Simply",
@@ -160,7 +142,7 @@ def simplify_content(text, topic):
                 "✅ Examples: Dogs, cats, snakes, eagles, sharks",
                 "✅ Humans are also vertebrates!"
             ],
-            "tip": "VERTEBRA = has a backbone! 🦴 That's the main difference from invertebrates."
+            "tip": "VERTEBRA = has a backbone! 🦴"
         },
         "photosynthesis": {
             "title": "🌱 Photosynthesis Made Easy",
@@ -171,7 +153,7 @@ def simplify_content(text, topic):
                 "🍎 They make Glucose (sugar) for energy",
                 "💨 They release Oxygen for us to breathe"
             ],
-            "tip": "Remember: Light + Water + CO₂ = Food + Oxygen ✨"
+            "tip": "Light + Water + CO₂ = Food + Oxygen ✨"
         },
         "algebra": {
             "title": "📐 Algebra Simplified",
@@ -182,40 +164,40 @@ def simplify_content(text, topic):
                 "✅ Check your answer by putting it back in",
                 "🧩 Example: If x + 5 = 12, then x = 7"
             ],
-            "tip": "Think of algebra like solving a mystery! 🔍 What number is hiding?"
+            "tip": "Algebra is like solving a mystery! 🔍"
         },
         "geometry": {
             "title": "📏 Geometry Basics",
             "bullets": [
                 "📐 Geometry is about SHAPES and ANGLES",
-                "🔺 Know your shapes: triangles, squares, circles, rectangles",
-                "📍 Angles: 90° is RIGHT angle, 180° is STRAIGHT line, 360° is FULL circle",
+                "🔺 Shapes: triangles, squares, circles, rectangles",
+                "📍 90° is RIGHT, 180° is STRAIGHT, 360° is FULL circle",
                 "📏 Perimeter = distance AROUND a shape",
                 "📦 Area = space INSIDE a shape"
             ],
-            "tip": "Draw it out! Visualizing shapes helps you understand. ✏️"
+            "tip": "Draw it out! Visualizing shapes helps! ✏️"
         },
         "chemistry": {
             "title": "⚗️ Chemistry Basics",
             "bullets": [
-                "🧪 Chemistry = study of substances and reactions",
+                "🧪 Study of substances and reactions",
                 "⚛️ ATOMS are tiny building blocks",
                 "🔗 Atoms join to make MOLECULES",
-                "💥 Chemical reactions make NEW substances",
+                "💥 Reactions make NEW substances",
                 "🌍 Everything is made from ELEMENTS"
             ],
-            "tip": "Think: Mixing ingredients in cooking = chemistry! 👨‍🍳"
+            "tip": "Mixing ingredients in cooking = chemistry! 👨‍🍳"
         },
         "respiration": {
             "title": "🫁 Respiration Explained",
             "bullets": [
-                "💨 Respiration is how cells get ENERGY from food",
+                "💨 How cells get ENERGY from food",
                 "🫁 Breathing brings oxygen into your body",
                 "⚡ Cells use oxygen to break down glucose",
-                "💪 This creates energy (ATP) for your body",
-                "💨 Your body releases carbon dioxide as waste"
+                "💪 Creates energy (ATP) for your body",
+                "💨 Body releases carbon dioxide as waste"
             ],
-            "tip": "Respiration ≠ Breathing. Respiration is inside cells! ⚛️"
+            "tip": "Respiration ≠ Breathing! ⚛️"
         },
         "enzyme": {
             "title": "🧬 Enzymes Simplified",
@@ -223,10 +205,10 @@ def simplify_content(text, topic):
                 "⚙️ Enzymes are HELPERS that speed up reactions",
                 "🎯 Each enzyme works on ONE specific substrate",
                 "🌡️ Heat can denature (break) enzymes",
-                "📊 Enzymes work best at certain temperatures",
-                "🔑 Think: Key fits into lock - enzyme fits into substrate"
+                "📊 Work best at certain temperatures",
+                "🔑 Key fits lock - enzyme fits substrate"
             ],
-            "tip": "Enzymes = biological catalysts that speed things up! ⚡"
+            "tip": "Enzymes = biological catalysts! ⚡"
         }
     }
     
@@ -237,13 +219,13 @@ def simplify_content(text, topic):
     return {
         "title": f"📚 Understanding {topic.title()}",
         "bullets": [
-            f"This is about {topic.title()}",
-            "Break the concept into smaller parts",
-            "Start with the basics",
-            "Build up to more complex ideas",
-            "Ask your teacher for help with tricky parts"
+            f"About {topic.title()}",
+            "Break into smaller parts",
+            "Start with basics",
+            "Build up gradually",
+            "Ask your teacher for help"
         ],
-        "tip": "You're doing great! Keep learning step by step. 💪"
+        "tip": "Keep learning step by step! 💪"
     }
 
 def apply_lumina_theme():
@@ -270,7 +252,6 @@ def apply_lumina_theme():
         border: 2px solid #ffffff !important;
         border-radius: 50px !important;
         font-weight: bold !important;
-        transition: 0.3s ease;
     }}
     
     .stTabs [data-baseweb="tab-list"] {{ background: rgba(255,255,255,0.05); border-radius: 10px; padding: 5px; }}
@@ -280,7 +261,6 @@ def apply_lumina_theme():
 
 apply_lumina_theme()
 
-# --- 2. HEADER ---
 st.markdown("""
     <div style="border: 2px solid #ffffff; border-radius: 15px; padding: 20px; text-align: center; background: rgba(255, 255, 255, 0.05); margin-bottom: 30px;">
         <h1 style="margin: 0; font-size: 2.2rem;">Lumina AI</h1>
@@ -312,13 +292,11 @@ with col_left:
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/PGXyZqCEN/"; 
         let model, webcam, isTracking = false;
-        
         let frustrationFrameCount = 0;
         let neutralFrameCount = 0;
         const FRUSTRATION_THRESHOLD = 90;
         const NEUTRAL_THRESHOLD = 45;
         const CONFIDENCE_THRESHOLD = 0.82;
-        
         let currentState = "neutral";
         let triggerLocked = false;
 
@@ -350,10 +328,7 @@ with col_left:
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
             let best = {className: "", probability: 0};
-            
-            prediction.forEach(p => { 
-                if(p.probability > best.probability) best = p; 
-            });
+            prediction.forEach(p => { if(p.probability > best.probability) best = p; });
             
             const labelDiv = document.getElementById("label-container");
             const confDiv = document.getElementById("confidence-display");
@@ -373,16 +348,11 @@ with col_left:
                 
                 if(frustrationFrameCount >= FRUSTRATION_THRESHOLD && !triggerLocked) {
                     triggerLocked = true;
-                    window.parent.postMessage({
-                        type: 'streamlit:set_component_value', 
-                        value: true, 
-                        key: 'trig'
-                    }, "*");
+                    window.parent.postMessage({type: 'streamlit:set_component_value', value: true, key: 'trig'}, "*");
                 }
             } else {
                 frustrationFrameCount = 0;
                 neutralFrameCount++;
-                
                 if(neutralFrameCount >= NEUTRAL_THRESHOLD) {
                     labelDiv.style.color = "#00FF7F";
                     robotDiv.innerHTML = "😊";
@@ -414,16 +384,14 @@ with col_left:
         st.session_state.frustration_confirmed = False
         
         if st.session_state.extracted_text and len(st.session_state.extracted_text.strip()) > 50:
-            with st.spinner("🔄 Simplifying content..."):
-                st.session_state.ai_simplified_bullets = simplify_with_ai(st.session_state.extracted_text)
+            st.session_state.ai_simplified_bullets = simplify_with_ai(st.session_state.extracted_text)
         
-        log_entry = {
+        st.session_state.test_logs.append({
             "Timestamp": datetime.now().strftime("%H:%M:%S"),
             "Event": "Frustration Detected",
             "Confidence": "High (>82%)",
             "Response": "Adaptive Scaffolding Triggered"
-        }
-        st.session_state.test_logs.append(log_entry)
+        })
         st.rerun()
 
 with col_right:
@@ -492,7 +460,6 @@ with col_right:
             </script>
         """
         
-        # REMOVED key="ocr_component" - THIS WAS THE ERROR
         ocr_return = components.html(ocr_html, height=500)
         
         st.write("---")
@@ -516,11 +483,11 @@ with col_right:
         with st.expander("🔧 Debug Information"):
             st.write(f"**Session State 'extracted_text':** {len(st.session_state.extracted_text)} characters")
             st.write(f"**Text Content:** {st.session_state.extracted_text[:200] if st.session_state.extracted_text else 'EMPTY'}")
-            st.write(f"**Transformer Model Available:** {'✅ Yes' if HAS_TRANSFORMERS else '❌ No (fallback mode)'}")
+            st.write(f"**Transformer Model:** {'✅ Yes (BART)' if HAS_TRANSFORMERS else '❌ No (fallback)'}")
             
-            if st.button("🔄 Manually Test State Update"):
-                st.session_state.extracted_text = "TEST: Vertebrates are animals that have a backbone. The five main types of vertebrates are fish, amphibians, reptiles, birds, and mammals..."
-                st.success("Manual test text added!")
+            if st.button("🔄 Test with Sample Text"):
+                st.session_state.extracted_text = "Vertebrates are animals that have a backbone. The five main types of vertebrates are fish, amphibians, reptiles, birds, and mammals. All vertebrates have a backbone that protects the spinal cord."
+                st.success("Test text added!")
                 st.rerun()
 
     with tab2:
@@ -532,14 +499,11 @@ with col_right:
         if st.session_state.is_frustrated and not st.session_state.frustration_confirmed:
             st.warning("⚠️ **Lumina Detected Learning Barrier** - Simplification Mode Active")
             
-            has_text = debug_has_text
-            
-            if has_text:
+            if debug_has_text:
                 subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
                 
                 if topic:
                     content = simplify_content(st.session_state.extracted_text, topic)
-                    
                     st.markdown(f"""
                     <div style="background: rgba(255,20,147,0.15); padding: 30px; border-radius: 15px; border-left: 10px solid #FF1493;">
                         <h2 style="margin-top:0; color: #FF1493;">{content['title']}</h2>
@@ -563,7 +527,7 @@ with col_right:
                 else:
                     st.markdown(f"""
                     <div style="background: rgba(255,20,147,0.15); padding: 30px; border-radius: 15px; border-left: 10px solid #FF1493;">
-                        <h2 style="margin-top:0; color: #FF1493;">📖 AI-Powered Academic Simplification</h2>
+                        <h2 style="margin-top:0; color: #FF1493;">📖 AI-Powered Simplification</h2>
                         <p><b>Content detected:</b> {st.session_state.extracted_text[:200]}...</p>
                         <hr style="opacity: 0.3;">
                         <h3>📌 Key Points in Simple Language:</h3>
@@ -582,13 +546,13 @@ with col_right:
                         </ul>
                         <hr style="opacity: 0.3;">
                         <p style="font-size: 1.1rem; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; font-style: italic;">
-                            💪 <b>{'Using AI model for simplification' if HAS_TRANSFORMERS else 'Using pattern-based simplification'}. Take your time reviewing the key points!</b>
+                            💪 Take your time reviewing! You've got this!
                         </p>
                     </div>
                     """, unsafe_allow_html=True)
             else:
                 st.error("❌ **No text extracted yet!**")
-                st.markdown(f"""
+                st.markdown("""
                 <div style="background: rgba(255,100,100,0.15); padding: 25px; border-radius: 15px; border-left: 10px solid #FF4444;">
                     <h3>What to do:</h3>
                     <ol>
@@ -597,14 +561,13 @@ with col_right:
                         <li>Click <b>"Extract Text"</b> to read what's on screen</li>
                         <li>Return to this tab while looking frustrated</li>
                     </ol>
-                    <p><b>Debug:</b> Session text length = {len(debug_text)} chars</p>
                 </div>
                 """, unsafe_allow_html=True)
             
             col_btn1, col_btn2, col_btn3 = st.columns(3)
             
             with col_btn1:
-                if st.button("✅ I Understand!", key="understand_btn", use_container_width=True):
+                if st.button("�� I Understand!", key="understand_btn", use_container_width=True):
                     st.session_state.is_frustrated = False
                     st.session_state.frustration_confirmed = True
                     st.session_state.test_logs.append({
@@ -629,11 +592,9 @@ with col_right:
                         <div style="background: rgba(52,152,219,0.2); padding: 20px; border-radius: 15px; border-left: 5px solid #3498db;">
                             <h3>📺 Video Tutorial for {st.session_state.detected_topic.title()}</h3>
                             <p><a href="{youtube_link}" target="_blank" style="color: #00BFFF; font-weight: bold; font-size: 1.2rem;">👉 WATCH EXPLANATION VIDEO</a></p>
-                            <p style="opacity: 0.9;">This video explains {st.session_state.detected_topic} step by step. You can pause, rewind, and watch as many times as you need!</p>
+                            <p style="opacity: 0.9;">This video explains {st.session_state.detected_topic} step by step.</p>
                         </div>
                         """, unsafe_allow_html=True)
-                    else:
-                        st.info("ℹ️ Extract text first so I can find the best video for your topic!")
             
             with col_btn3:
                 if st.button("📧 Email Teacher", key="email_btn", use_container_width=True):
@@ -643,7 +604,7 @@ with col_right:
                         "Topic": st.session_state.detected_topic or "Unknown",
                         "Status": "Pending Response"
                     })
-                    st.success("✅ Your teacher has been notified! They'll contact you soon.")
+                    st.success("✅ Your teacher has been notified!")
         
         elif st.session_state.is_frustrated and st.session_state.frustration_confirmed:
             st.success("✅ Great job! You understood the concept.")
@@ -660,11 +621,11 @@ with col_right:
             st.markdown("""
             <div style="background: rgba(100,200,255,0.1); padding: 20px; border-radius: 10px; border-left: 5px solid #64c8ff;">
                 <p><b>How I Help You:</b></p>
-                <ul style="font-size: 1rem; line-height: 1.8;">
+                <ul>
                     <li>🎬 Watch your face while you study</li>
-                    <li>😊 When I see frustration, I'll simplify things for you</li>
+                    <li>😊 When I see frustration, I'll simplify for you</li>
                     <li>📄 I'll read text from your screen</li>
-                    <li>✨ I'll use AI to break academic texts into easy bullet points</li>
+                    <li>✨ I'll use AI to break topics into easy bullet points</li>
                     <li>📺 I'll find helpful videos for you</li>
                 </ul>
             </div>
@@ -695,11 +656,9 @@ with col_right:
             with col_stats3:
                 help_events = len([e for e in st.session_state.test_logs if "Help" in e.get("Event", "")])
                 st.metric("Help Requests", help_events)
-        
         else:
-            st.write("📭 No events recorded yet. Start the tracker to begin data collection.")
+            st.write("📭 No events recorded yet.")
 
-# --- SIDEBAR ---
 st.sidebar.title("🎛️ Lumina Control Panel")
 st.sidebar.markdown("**Student:** Puteri Aisyah Sofia")
 st.sidebar.markdown("**Supervisor:** AP Dr. Ibrahim Venkat")
@@ -707,19 +666,13 @@ st.sidebar.markdown("**Research Date:** " + datetime.now().strftime("%Y-%m-%d"))
 st.sidebar.divider()
 
 with st.sidebar.expander("⚙️ Advanced Settings"):
-    st.markdown("**Supported Subjects:**")
-    st.markdown("""
-    ✅ IGCSE Math (Algebra, Geometry, Trigonometry, Calculus, Statistics)
-    ✅ IGCSE Science (Biology, Chemistry, Physics, Vertebrates, Photosynthesis, Enzymes)
-    ✅ IGCSE English (Grammar, Literature, Essay, Comprehension)
-    ✅ Bahasa Melayu (Tata Bahasa, Sastra, Penulisan)
-    """)
+    st.markdown("**Supported:**")
+    st.markdown("✅ IGCSE Math, Science, English, Bahasa Melayu")
     
-    st.markdown("**AI Simplification:**")
     if HAS_TRANSFORMERS:
-        st.success("✅ Transformer model loaded (Facebook BART)")
+        st.success("✅ AI Model: Facebook BART")
     else:
-        st.warning("⚠️ Using fallback pattern-based simplification")
+        st.warning("⚠️ Fallback Mode Active")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -740,17 +693,12 @@ st.sidebar.markdown("""
 <div style="font-size: 0.85rem; opacity: 0.7;">
     <b>System Status:</b><br>
     ✅ Perception Engine: Ready<br>
-    ✅ Text Extraction (Tesseract): Ready<br>
-    ✅ IGCSE Topic Detection: Ready<br>
-    ✅ AI Text Simplification: Ready<br>
-    ✅ Adaptive Scaffolding: Enabled<br>
-    ✅ YouTube Integration: Ready<br>
-    ✅ Session State Sync: Fixed<br>
+    ✅ Text Extraction: Ready<br>
+    ✅ Topic Detection: Ready<br>
+    ✅ AI Simplification: Ready<br>
+    ✅ Scaffolding: Enabled<br>
     <br>
-    <b>Integration:</b><br>
-    🔗 Academic Text Simplification<br>
-    📚 @DaniyalAhmedKhan1234<br>
-    <br>
-    <i>Version 4.1 | Built with ❤️ for Inclusive Education</i>
+    🔗 Integration: @DaniyalAhmedKhan1234<br>
+    <i>Version 4.1 | Lumina AI</i>
 </div>
 """, unsafe_allow_html=True)
