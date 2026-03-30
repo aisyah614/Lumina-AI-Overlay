@@ -589,7 +589,7 @@ with col_right:
             st.write(f"**YouTube Link:** {st.session_state.youtube_link if st.session_state.youtube_link else 'NONE'}")
             st.write(f"**Transformer Model:** {'✅ Yes (BART)' if HAS_TRANSFORMERS else '❌ No (fallback)'}")
 
-    with tab2:
+       with tab2:
         st.subheader("🤖 Adaptive Support Dashboard")
         
         debug_text = st.session_state.extracted_text if st.session_state.extracted_text else ""
@@ -675,6 +675,11 @@ with col_right:
                 if st.button("✅ I Understand!", key="understand_btn", use_container_width=True):
                     st.session_state.is_frustrated = False
                     st.session_state.frustration_confirmed = True
+                    st.session_state.extracted_text = ""
+                    st.session_state.detected_topic = None
+                    st.session_state.detected_subject = None
+                    st.session_state.youtube_link = None
+                    st.session_state.ai_simplified_bullets = None
                     st.session_state.test_logs.append({
                         "Timestamp": datetime.now().strftime("%H:%M:%S"),
                         "Event": "User Confirmed Understanding",
@@ -716,15 +721,27 @@ with col_right:
         
         elif st.session_state.is_frustrated and st.session_state.frustration_confirmed:
             st.success("✅ Great job! You understood the concept.")
-            if st.button("🔄 Reset & Continue Learning"):
-                st.session_state.is_frustrated = False
-                st.session_state.frustration_confirmed = False
-                st.session_state.extracted_text = ""
-                st.session_state.detected_topic = None
-                st.session_state.detected_subject = None
-                st.session_state.youtube_link = None
-                st.session_state.ai_simplified_bullets = None
-                st.rerun()
+            st.markdown("""
+            <div style="background: rgba(76, 175, 80, 0.2); padding: 30px; border-radius: 15px; border-left: 10px solid #4CAF50; text-align: center;">
+                <h2 style="color: #4CAF50; margin-bottom: 20px;">🎉 Excellent Progress!</h2>
+                <p style="font-size: 1.1rem; margin-bottom: 20px;">You've successfully understood this concept. Ready to learn something new?</p>
+                <p style="font-size: 0.95rem; opacity: 0.9;">Click the button below to clear everything and continue with the next topic.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            col_reset = st.columns([1, 1, 1])
+            with col_reset[1]:
+                if st.button("🔄 Continue to Next Topic", key="reset_btn", use_container_width=True):
+                    st.session_state.is_frustrated = False
+                    st.session_state.frustration_confirmed = False
+                    st.session_state.extracted_text = ""
+                    st.session_state.detected_topic = None
+                    st.session_state.detected_subject = None
+                    st.session_state.youtube_link = None
+                    st.session_state.ai_simplified_bullets = None
+                    st.rerun()
         
         else:
             st.info("✨ **Status: Monitoring Mode Active**")
@@ -740,7 +757,7 @@ with col_right:
                 </ul>
             </div>
             """, unsafe_allow_html=True)
-
+            
     with tab3:
         st.subheader("📊 System Validation Data")
         
