@@ -706,16 +706,6 @@ with col_right:
                         """, unsafe_allow_html=True)
                     else:
                         st.error("❌ Could not find YouTube link for this topic.")
-            
-            with col_btn3:
-                if st.button("📧 Email Teacher", key="email_btn", use_container_width=True):
-                    st.session_state.test_logs.append({
-                        "Timestamp": datetime.now().strftime("%H:%M:%S"),
-                        "Event": "Teacher Notification Sent",
-                        "Topic": st.session_state.detected_topic or "Unknown",
-                        "Status": "Pending Response"
-                    })
-                    st.success("✅ Your teacher has been notified!")
         
         # STATE: FRUSTRATED & CONFIRMED (SUCCESS)
         elif st.session_state.is_frustrated and st.session_state.frustration_confirmed:
