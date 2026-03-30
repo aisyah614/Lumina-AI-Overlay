@@ -6,6 +6,7 @@ from datetime import datetime
 # --- 1. INTERFACE & DATA SESSION CONFIG ---
 st.set_page_config(page_title="Lumina AI | Research Framework", layout="wide", page_icon="🤖")
 
+# Initialize Session States
 if 'is_frustrated' not in st.session_state:
     st.session_state.is_frustrated = False
 if 'test_logs' not in st.session_state:
@@ -23,13 +24,18 @@ def apply_lumina_theme():
     }}
     [data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {{
         background: rgba(255, 255, 255, 0.07);
-        backdrop-filter: blur(15px); border-radius: 20px; padding: 30px; border: 2px solid #ffffff; 
+        backdrop-filter: blur(15px);
+        border-radius: 20px;
+        padding: 30px;
+        border: 2px solid #ffffff; 
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     }}
     .stButton>button {{
         background: linear-gradient(45deg, #FF1493, #9400D3) !important;
-        color: white !important; border: 2px solid #ffffff !important;
-        border-radius: 50px !important; font-weight: bold !important;
+        color: white !important;
+        border: 2px solid #ffffff !important;
+        border-radius: 50px !important;
+        font-weight: bold !important;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -38,14 +44,14 @@ apply_lumina_theme()
 
 # --- 2. SCAFFOLDING LOGIC (IGCSE & BM) ---
 def get_subject_support(text):
-    t = text.lower()
+    t = str(text).lower()
     if any(w in t for w in ['x', 'solve', 'equation', 'math', 'angle']):
-        return "🔢 **IGCSE Math Tip:** Focus on isolating the variable. Remember to perform the same operation on both sides of the '='."
+        return "🔢 **IGCSE Math:** Focus on isolating the variable. Remember to balance the equation by doing the same to both sides."
     elif any(w in t for w in ['cell', 'atom', 'energy', 'force', 'reaction']):
-        return "🧬 **IGCSE Science Tip:** Think about the 'Cause and Effect'. What is the energy transfer happening here?"
+        return "🧬 **IGCSE Science:** Visualize the process. What is the 'input' and what is the 'output' in this system?"
     elif any(w in t for w in ['imbuhan', 'peribahasa', 'karangan', 'bahasa']):
-        return "🇲🇾 **Bantuan BM:** Kenal pasti subjek dan predikat. Gunakan imbuhan yang tepat untuk mengukuhkan ayat anda."
-    return "📖 **English/General Tip:** Break this paragraph into 3 main points: Who, What, and Why."
+        return "🇲🇾 **Bantuan BM:** Pastikan penggunaan Imbuhan Awalan (me-, ber-) sesuai dengan kata dasar yang digunakan."
+    return "📖 **English/General:** Look for the 'Topic Sentence' (usually the first one) to understand the main idea."
 
 # --- 3. HEADER ---
 st.markdown("""
@@ -60,59 +66,52 @@ col_left, col_right = st.columns([1.4, 2])
 with col_left:
     st.subheader("👤 Perception Engine")
     
-    tm_html = """
+    # We removed the variable assignment "face_signal =" to fix the TypeError
+    components.html("""
     <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 15px; border: 2px solid white; text-align: center;">
         <div id="robot-mascot" style="font-size: 90px; margin-bottom: 15px;">🤖</div>
-        <div id="webcam-container" style="margin: 0 auto 15px auto; width: 350px; height: 350px; border-radius: 20px; overflow: hidden; border: 2px solid white; background: #000;"></div>
+        <div id="webcam-container" style="margin: 0 auto 15px auto; width: 320px; height: 320px; border-radius: 20px; overflow: hidden; border: 2px solid white;"></div>
         <div id="label-container" style="font-family: sans-serif; font-weight: bold; font-size: 1.6rem; color: #ffffff;">System Ready</div>
-        <div style="display: flex; gap: 10px; margin-top: 25px;">
-            <button id="start-btn" type="button" onclick="init()" style="flex: 2; padding: 15px; background: linear-gradient(45deg, #FF1493, #9400D3); color: white; border: 2px solid white; border-radius: 30px; cursor: pointer; font-weight: bold;">🚀 Start Tracker</button>
-        </div>
+        <button id="start-btn" onclick="init()" style="margin-top:20px; padding: 15px 30px; background: linear-gradient(45deg, #FF1493, #9400D3); color: white; border: 2px solid white; border-radius: 30px; cursor: pointer; font-weight: bold;">🚀 Start Tracker</button>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-    <script type="text/javascript">
+    <script>
         const URL = "https://teachablemachine.withgoogle.com/models/PGXyZqCEN/"; 
         let model, webcam, isTracking = false;
-        let frustrationFrames = 0;
 
         async function init() {
             model = await tmImage.load(URL + "model.json", URL + "metadata.json");
-            webcam = new tmImage.Webcam(350, 350, true); 
+            webcam = new tmImage.Webcam(320, 320, true); 
             await webcam.setup(); await webcam.play();
             isTracking = true;
             window.requestAnimationFrame(loop);
             document.getElementById("webcam-container").appendChild(webcam.canvas);
             document.getElementById("start-btn").style.display = "none";
         }
+
         async function loop() { if(isTracking) { webcam.update(); await predict(); window.requestAnimationFrame(loop); } }
+
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
             let best = {className: "", probability: 0};
             prediction.forEach(p => { if(p.probability > best.probability) best = p; });
+            
             const labelDiv = document.getElementById("label-container");
-            const robotDiv = document.getElementById("robot-mascot");
             labelDiv.innerHTML = "Status: " + best.className;
-            if(best.className === "Frustrated" && best.probability > 0.80) {
-                frustrationFrames++;
-                labelDiv.style.color = "#FF4B4B"; robotDiv.innerHTML = "🤔";
-                if(frustrationFrames > 40) {
-                    window.parent.postMessage({type: 'streamlit:set_component_value', value: "TRIGGER", key: 'face_trigger'}, "*");
-                    frustrationFrames = 0;
-                }
-            } else {
-                frustrationFrames = 0;
-                labelDiv.style.color = "#00FF7F"; robotDiv.innerHTML = "😊";
+            
+            if(best.className === "Frustrated" && best.probability > 0.85) {
+                // This sends the trigger to Streamlit's internal messaging
+                window.parent.postMessage({type: 'streamlit:set_component_value', value: true, key: 'frustrated_state'}, "*");
             }
         }
     </script>
-    """
-    # The key 'face_trigger' matches the message sent from JS
-    face_signal = components.html(tm_html, height=600, key="face_tracker")
-    
-    if face_signal == "TRIGGER" and not st.session_state.is_frustrated:
+    """, height=550)
+
+    # Cool Override for manual testing if webcam isn't available
+    if st.button("🧪 Manual Trigger (Simulate Frustration)"):
         st.session_state.is_frustrated = True
-        st.session_state.test_logs.append({"Timestamp": datetime.now().strftime("%H:%M:%S"), "Event": "Frustration Detected"})
         st.rerun()
 
 with col_right:
@@ -120,62 +119,68 @@ with col_right:
     
     with tab1:
         st.markdown("### Desktop Scaffolding View")
-        ocr_js = """
-            <div style="background: #000; border: 2px solid white; border-radius: 15px; padding: 10px;">
-                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <button id="cast-btn" style="flex: 1; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 10px; font-weight: bold;">🌐 Cast Screen</button>
-                    <button id="ocr-btn" style="flex: 1; padding: 12px; background: #2980b9; color: white; border: none; border-radius: 10px; font-weight: bold;">📄 Analyze Text</button>
-                </div>
-                <video id="v" autoplay style="width: 100%; height: 320px; border-radius: 10px;"></video>
+        # We wrap this in a placeholder to catch the OCR text
+        ocr_code = """
+            <div style="background: #000; border: 2px solid white; border-radius: 15px; padding: 10px; text-align:center;">
+                <button id="cast-btn" style="padding: 12px; background: #27ae60; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-right:5px;">🌐 Cast Screen</button>
+                <button id="ocr-btn" style="padding: 12px; background: #2980b9; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold;">📄 Analyze Text</button>
+                <video id="v" autoplay style="width: 100%; height: 300px; margin-top:10px; border-radius: 10px;"></video>
             </div>
             <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
             <script>
-                const video = document.getElementById('v');
+                const v = document.getElementById('v');
                 document.getElementById('cast-btn').onclick = async () => {
-                    video.srcObject = await navigator.mediaDevices.getDisplayMedia({video: true});
+                    v.srcObject = await navigator.mediaDevices.getDisplayMedia({video: true});
                 };
                 document.getElementById('ocr-btn').onclick = async () => {
                     const canvas = document.createElement('canvas');
-                    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    canvas.width = v.videoWidth; canvas.height = v.videoHeight;
+                    canvas.getContext('2d').drawImage(v, 0, 0);
                     const result = await Tesseract.recognize(canvas, 'eng');
-                    // Sending the actual text string back to Streamlit
-                    window.parent.postMessage({type: 'streamlit:set_component_value', value: result.data.text, key: 'ocr_bridge'}, "*");
+                    window.parent.postMessage({type: 'streamlit:set_component_value', value: result.data.text, key: 'ocr_text'}, "*");
                 };
             </script>
         """
-        # We catch the text signal here
-        ocr_signal = components.html(ocr_js, height=450, key="ocr_component")
-        if ocr_signal and isinstance(ocr_signal, str):
-            st.session_state.extracted_text = ocr_signal
+        components.html(ocr_code, height=450)
 
     with tab2:
+        # Check if frustration was triggered via the JS message
         if st.session_state.is_frustrated:
-            st.warning("🤖 Lumina: Barrier Detected! Simplification Active.")
+            st.warning("🤖 Lumina: I noticed you seem stuck. Let me help simplify this.")
             
-            # Clean string conversion to avoid DeltaGenerator errors
             display_text = str(st.session_state.extracted_text)
-            support_tip = get_subject_support(display_text)
+            tip = get_subject_support(display_text)
             
             st.markdown(f"""
-            <div style="background: rgba(255,20,147,0.1); padding: 20px; border-radius: 15px; border-left: 8px solid #FF1493;">
-                <h3>📖 Easy Mode Summary</h3>
-                <p style="font-size: 0.9rem; opacity:0.8;"><b>Original context:</b> {display_text[:150]}...</p>
-                <hr style="opacity: 0.3;">
-                <h4 style="color: #FFD700;">{support_tip}</h4>
-                <ul>
-                    <li>Lumina has identified a cognitive hurdle.</li>
-                    <li>Read the tip above and try the problem again slowly.</li>
-                </ul>
+            <div style="background: rgba(255,20,147,0.1); padding: 25px; border-radius: 15px; border-left: 10px solid #FF1493;">
+                <h3 style="margin-top:0;">📖 {tip[:15]} Mode</h3>
+                <p><b>Original Context:</b> {display_text[:200]}...</p>
+                <hr style="opacity:0.2;">
+                <h4 style="color:#FFD700;">Lumina's Guidance:</h4>
+                <p>{tip}</p>
+                <p style="font-size:0.9rem; opacity:0.8;">Take a deep breath. Focus only on the step mentioned above.</p>
             </div>
             """, unsafe_allow_html=True)
             
-            if st.button("✅ I understand now!"):
+            if st.button("✅ I understand now! Resume Learning"):
                 st.session_state.is_frustrated = False
+                st.session_state.test_logs.append({"Timestamp": datetime.now().strftime("%H:%M:%S"), "Event": "User Reset (Success)"})
                 st.rerun()
         else:
-            st.info("Status: **Monitoring Mode**. Content will simplify if frustration is detected.")
+            st.info("Status: **Monitoring Mode**. Lumina will automatically assist if frustration is detected.")
 
     with tab3:
         if st.session_state.test_logs:
             st.table(pd.DataFrame(st.session_state.test_logs))
+        else:
+            st.write("No events recorded yet. Start the tracker to begin.")
+
+# --- SIDEBAR ---
+st.sidebar.title("Lumina Control Panel")
+st.sidebar.markdown(f"**Student:** Aisyah Sofia")
+st.sidebar.markdown(f"**Site:** Al-Khor, Qatar")
+st.sidebar.divider()
+if st.sidebar.button("🗑️ Clear Logs"):
+    st.session_state.test_logs = []
+    st.session_state.is_frustrated = False
+    st.rerun()
