@@ -59,6 +59,11 @@ if 'detected_topic' not in st.session_state:
     st.session_state.detected_topic = None
 if 'detected_subject' not in st.session_state:
     st.session_state.detected_subject = None
+if 'ocr_triggered' not in st.session_state:
+    st.session_state.ocr_triggered = False
+if 'youtube_link' not in st.session_state:
+    st.session_state.youtube_link = None
+
 
 def detect_igcse_topic(text):
     """Detect IGCSE subject and topic from extracted text"""
@@ -71,9 +76,11 @@ def detect_igcse_topic(text):
     for subject, topics in IGCSE_TOPICS.items():
         for topic, youtube_link in topics.items():
             if topic in text_lower:
+                st.session_state.youtube_link = youtube_link
                 return subject, topic, youtube_link
     
     return None, None, None
+
 
 def simplify_content(text, topic):
     """Generate simplified content based on detected topic"""
@@ -187,6 +194,37 @@ def simplify_content(text, topic):
         "tip": "You're doing great! Keep learning step by step. 💪"
     }
 
+
+def on_ocr_change():
+    """Callback when OCR text is updated from JavaScript"""
+    if st.session_state.ocr_input:
+        st.session_state.extracted_text = st.session_state.ocr_input
+        st.session_state.ocr_triggered = True
+        
+        # Auto-detect IGCSE topic
+        subject, topic, youtube_link = detect_igcse_topic(st.session_state.ocr_input)
+        if topic:
+            st.session_state.detected_subject = subject
+            st.session_state.detected_topic = topic
+        else:
+            st.session_state.detected_subject = None
+            st.session_state.detected_topic = None
+
+
+def on_frustration_trigger():
+    """Callback when frustration is detected"""
+    if st.session_state.frustration_input and not st.session_state.is_frustrated:
+        st.session_state.is_frustrated = True
+        st.session_state.frustration_confirmed = False
+        log_entry = {
+            "Timestamp": datetime.now().strftime("%H:%M:%S"),
+            "Event": "Frustration Detected",
+            "Confidence": "High (>82%)",
+            "Response": "Adaptive Scaffolding Triggered"
+        }
+        st.session_state.test_logs.append(log_entry)
+
+
 def apply_lumina_theme():
     bg_url = "https://raw.githubusercontent.com/AisyahSofia/Lumina-AI/main/classroom_bg.jpg"
     st.markdown(f"""
@@ -216,6 +254,13 @@ def apply_lumina_theme():
     
     .stTabs [data-baseweb="tab-list"] {{ background: rgba(255,255,255,0.05); border-radius: 10px; padding: 5px; }}
     .stTabs [data-baseweb="tab"] {{ color: white !important; }}
+    
+    /* Hide the text input labels */
+    .stTextInput label {{ display: none; }}
+    
+    /* Hide streamlit branding */
+    #MainMenu {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
     </style>
     """, unsafe_allow_html=True)
 
@@ -234,7 +279,7 @@ col_left, col_right = st.columns([1.4, 2])
 with col_left:
     st.subheader("👤 Perception Engine")
     
-    # --- IMPROVED FACIAL DETECTION WITH BETTER DEBOUNCING ---
+    # --- FACIAL DETECTION WITH HIDDEN INPUT BRIDGE ---
     tm_html = """
     <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 15px; border: 2px solid white; text-align: center;">
         <div id="robot-mascot" style="font-size: 90px; margin-bottom: 15px;">🤖</div>
@@ -255,7 +300,6 @@ with col_left:
         const URL = "https://teachablemachine.withgoogle.com/models/PGXyZqCEN/"; 
         let model, webcam, isTracking = false;
         
-        // IMPROVED DEBOUNCING - Stricter threshold
         let frustrationFrameCount = 0;
         let neutralFrameCount = 0;
         const FRUSTRATION_THRESHOLD = 90;
@@ -318,11 +362,12 @@ with col_left:
                 
                 if(frustrationFrameCount >= FRUSTRATION_THRESHOLD && !triggerLocked) {
                     triggerLocked = true;
-                    window.parent.postMessage({
-                        type: 'streamlit:set_component_value', 
-                        value: true, 
-                        key: 'trig'
-                    }, "*");
+                    // Send to Streamlit via hidden input
+                    const input = window.parent.document.getElementById('frustration_input');
+                    if (input) {
+                        input.value = 'trigger_' + Date.now();
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
                 }
             } else {
                 frustrationFrameCount = 0;
@@ -352,19 +397,10 @@ with col_left:
         }
     </script>
     """
-    detect_signal = components.html(tm_html, height=750)
+    components.html(tm_html, height=750)
     
-    if detect_signal and not st.session_state.is_frustrated:
-        st.session_state.is_frustrated = True
-        st.session_state.frustration_confirmed = False
-        log_entry = {
-            "Timestamp": datetime.now().strftime("%H:%M:%S"),
-            "Event": "Frustration Detected",
-            "Confidence": "High (>82%)",
-            "Response": "Adaptive Scaffolding Triggered"
-        }
-        st.session_state.test_logs.append(log_entry)
-        st.rerun()
+    # Hidden input for frustration trigger - uses callback
+    st.text_input("Frustration Trigger", key="frustration_input", value="", label_visibility="collapsed", on_change=on_frustration_trigger)
 
 with col_right:
     tab1, tab2, tab3 = st.tabs(["🖥️ Shared Material", "💡 Adaptive Notes", "📊 Research Logs"])
@@ -372,6 +408,7 @@ with col_right:
     with tab1:
         st.markdown("### 📱 Learning Material Capture")
         
+        # OCR HTML with proper Streamlit bridge
         ocr_html = """
             <div style="background: #000; border: 2px solid white; border-radius: 15px; padding: 15px;">
                 <div style="display: flex; gap: 10px; margin-bottom: 10px;">
@@ -417,11 +454,12 @@ with col_right:
                         console.log("OCR Result:", extractedText);
                         
                         if(extractedText && extractedText.trim().length > 0) {
-                            window.parent.postMessage({
-                                type: 'streamlit:set_component_value', 
-                                value: extractedText, 
-                                key: 'ocr_bridge'
-                            }, "*");
+                            // Send to Streamlit via hidden input
+                            const input = window.parent.document.getElementById('ocr_input');
+                            if (input) {
+                                input.value = extractedText;
+                                input.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
                             statusDiv.innerHTML = "✅ Text extracted! " + extractedText.length + " characters found.";
                         } else {
                             statusDiv.innerHTML = "⚠️ No text detected. Try clearer screen or better lighting.";
@@ -433,19 +471,19 @@ with col_right:
             </script>
         """
         
-        ocr_return = components.html(ocr_html, height=500)
+        components.html(ocr_html, height=500)
         
-        # FIX: Properly capture and store OCR text
-        if ocr_return and isinstance(ocr_return, str) and len(ocr_return.strip()) > 20:
-            st.session_state.extracted_text = ocr_return
-            st.success(f"✅ Text extracted! ({len(ocr_return)} characters)")
+        # Hidden input for OCR text - uses callback
+        st.text_input("OCR Input", key="ocr_input", value="", label_visibility="collapsed", on_change=on_ocr_change)
+        
+        # Show success message when OCR is triggered
+        if st.session_state.ocr_triggered:
+            st.session_state.ocr_triggered = False
+            st.success(f"✅ Text extracted! ({len(st.session_state.extracted_text)} characters)")
             
-            # Auto-detect IGCSE topic
-            subject, topic, youtube_link = detect_igcse_topic(ocr_return)
-            if topic:
-                st.session_state.detected_subject = subject
-                st.session_state.detected_topic = topic
-                st.info(f"🎯 **Detected:** {subject} - {topic.title()}")
+            # Detect topic
+            if st.session_state.detected_topic:
+                st.info(f"🎯 **Detected:** {st.session_state.detected_subject} - {st.session_state.detected_topic.title()}")
             else:
                 st.warning("⚠️ Could not auto-detect topic. Will use generic simplification.")
         
@@ -521,7 +559,6 @@ with col_right:
                 <div style="background: rgba(255,100,100,0.15); padding: 25px; border-radius: 15px; border-left: 10px solid #FF4444;">
                     <h3>What to do:</h3>
                     <ol>
-                        <li>Go to the <b>"Shared Material"</b> tab</li>
                         <li>Click <b>"Cast Screen"</b> to show your learning content</li>
                         <li>Click <b>"Extract Text"</b> to read what's on screen</li>
                         <li>Come back here to see the simplified version!</li>
@@ -545,18 +582,17 @@ with col_right:
             
             with col_btn2:
                 if st.button("🆘 Need Help", key="help_btn", use_container_width=True):
-                    if st.session_state.detected_topic:
-                        subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
+                    if st.session_state.youtube_link:
                         st.session_state.test_logs.append({
                             "Timestamp": datetime.now().strftime("%H:%M:%S"),
                             "Event": "Help Requested",
                             "Topic": st.session_state.detected_topic,
-                            "YouTube Link": youtube_link
+                            "YouTube Link": st.session_state.youtube_link
                         })
                         st.markdown(f"""
                         <div style="background: rgba(52,152,219,0.2); padding: 20px; border-radius: 15px; border-left: 5px solid #3498db;">
                             <h3>📺 Video Tutorial for {st.session_state.detected_topic.title()}</h3>
-                            <p><a href="{youtube_link}" target="_blank" style="color: #00BFFF; font-weight: bold; font-size: 1.2rem;">👉 WATCH EXPLANATION VIDEO</a></p>
+                            <p><a href="{st.session_state.youtube_link}" target="_blank" style="color: #00BFFF; font-weight: bold; font-size: 1.2rem;">👉 WATCH EXPLANATION VIDEO</a></p>
                             <p style="opacity: 0.9;">This video explains {st.session_state.detected_topic} step by step. You can pause, rewind, and watch as many times as you need!</p>
                         </div>
                         """, unsafe_allow_html=True)
@@ -652,6 +688,7 @@ with st.sidebar.expander("⚙️ Advanced Settings"):
             st.session_state.is_frustrated = False
             st.session_state.frustration_confirmed = False
             st.session_state.extracted_text = ""
+            st.session_state.detected_topic = None
             st.rerun()
 
 st.sidebar.divider()
@@ -664,6 +701,6 @@ st.sidebar.markdown("""
     ✅ Adaptive Scaffolding: Enabled<br>
     ✅ YouTube Integration: Ready<br>
     <br>
-    <i>Version 3.1 | Built with ❤️ for Inclusive Education</i>
+    <i>Version 4.0 | Built with ❤️ for Inclusive Education</i>
 </div>
 """, unsafe_allow_html=True)
