@@ -4,11 +4,10 @@ import pandas as pd
 from datetime import datetime
 import json
 
-# Try to import transformers for text simplification (install with: pip install transformers torch)
+# Try to import transformers for text simplification
 try:
     from transformers import pipeline
     HAS_TRANSFORMERS = True
-    # Initialize the simplification pipeline
     simplifier = pipeline("text2text-generation", model="facebook/bart-large-cnn")
 except:
     HAS_TRANSFORMERS = False
@@ -87,27 +86,20 @@ def detect_igcse_topic(text):
     return None, None, None
 
 def simplify_with_ai(text):
-    """
-    Simplify text using Hugging Face transformer model.
-    Falls back to sentence-based simplification if model unavailable.
-    """
+    """Simplify text using Hugging Face transformer model"""
     if not text or len(text.strip()) < 20:
         return ["Unable to process text. Please provide more content."]
     
-    # Try using the transformer model
     if HAS_TRANSFORMERS and simplifier:
         try:
-            # Summarize/simplify the text
             result = simplifier(text, max_length=150, min_length=50, do_sample=False)
             simplified_text = result[0]['summary_text']
             
-            # Convert to bullet points
             sentences = simplified_text.split('. ')
             bullets = []
             for sentence in sentences:
                 sentence = sentence.strip()
                 if sentence:
-                    # Add emoji
                     emoji = "📌"
                     if any(word in sentence.lower() for word in ["important", "key", "essential"]):
                         emoji = "⭐"
@@ -421,7 +413,6 @@ with col_left:
         st.session_state.is_frustrated = True
         st.session_state.frustration_confirmed = False
         
-        # Generate AI simplified bullets when frustration detected
         if st.session_state.extracted_text and len(st.session_state.extracted_text.strip()) > 50:
             with st.spinner("🔄 Simplifying content..."):
                 st.session_state.ai_simplified_bullets = simplify_with_ai(st.session_state.extracted_text)
@@ -501,7 +492,8 @@ with col_right:
             </script>
         """
         
-        ocr_return = components.html(ocr_html, height=500, key="ocr_component")
+        # REMOVED key="ocr_component" - THIS WAS THE ERROR
+        ocr_return = components.html(ocr_html, height=500)
         
         st.write("---")
         st.subheader("📝 Text Processing")
@@ -569,7 +561,6 @@ with col_right:
                     </div>
                     """, unsafe_allow_html=True)
                 else:
-                    # Show AI-generated bullet points using transformer model
                     st.markdown(f"""
                     <div style="background: rgba(255,20,147,0.15); padding: 30px; border-radius: 15px; border-left: 10px solid #FF1493;">
                         <h2 style="margin-top:0; color: #FF1493;">📖 AI-Powered Academic Simplification</h2>
@@ -715,7 +706,7 @@ st.sidebar.markdown("**Supervisor:** AP Dr. Ibrahim Venkat")
 st.sidebar.markdown("**Research Date:** " + datetime.now().strftime("%Y-%m-%d"))
 st.sidebar.divider()
 
-with st.sidebar.expander("⚙��� Advanced Settings"):
+with st.sidebar.expander("⚙️ Advanced Settings"):
     st.markdown("**Supported Subjects:**")
     st.markdown("""
     ✅ IGCSE Math (Algebra, Geometry, Trigonometry, Calculus, Statistics)
@@ -760,6 +751,6 @@ st.sidebar.markdown("""
     🔗 Academic Text Simplification<br>
     📚 @DaniyalAhmedKhan1234<br>
     <br>
-    <i>Version 4.0 | Built with ❤️ for Inclusive Education</i>
+    <i>Version 4.1 | Built with ❤️ for Inclusive Education</i>
 </div>
 """, unsafe_allow_html=True)
