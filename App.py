@@ -1,161 +1,181 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime
-import time
 
-# --- 1. SYSTEM & THEME CONFIG ---
-st.set_page_config(page_title="Lumina AI | Adaptive Learning", layout="wide", page_icon="🤖")
+# --- 1. INTERFACE & DATA SESSION CONFIG ---
+st.set_page_config(page_title="Lumina AI | Research Framework", layout="wide", page_icon="🤖")
 
-# Initialize persistent session states
 if 'is_frustrated' not in st.session_state:
     st.session_state.is_frustrated = False
 if 'test_logs' not in st.session_state:
     st.session_state.test_logs = []
-if 'start_time' not in st.session_state:
-    st.session_state.start_time = time.time()
-if 'subject_mode' not in st.session_state:
-    st.session_state.subject_mode = "General"
+if 'extracted_text' not in st.session_state:
+    st.session_state.extracted_text = "No text extracted yet. Share your screen and click 'Analyze Screen'."
 
-def apply_custom_design():
+def apply_lumina_theme():
     bg_url = "https://raw.githubusercontent.com/AisyahSofia/Lumina-AI/main/classroom_bg.jpg"
     st.markdown(f"""
     <style>
     .stApp {{
-        background: linear-gradient(rgba(10, 10, 30, 0.9), rgba(20, 0, 40, 0.9)), url("{bg_url}");
+        background: linear-gradient(rgba(26, 10, 46, 0.88), rgba(13, 0, 26, 0.88)), url("{bg_url}");
         background-size: cover; background-attachment: fixed; color: #ffffff;
     }}
-    /* Glassmorphism Card Style */
-    .lumina-card {{
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(15px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 20px; padding: 25px; margin-bottom: 20px;
+    [data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {{
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(15px); border-radius: 20px; padding: 30px; border: 2px solid #ffffff; 
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     }}
     .stButton>button {{
-        background: linear-gradient(90deg, #FF1493, #9400D3) !important;
-        color: white !important; border: none !important;
-        border-radius: 50px !important; padding: 10px 30px !important;
-        font-weight: bold !important; transition: 0.3s;
+        background: linear-gradient(45deg, #FF1493, #9400D3) !important;
+        color: white !important; border: 2px solid #ffffff !important;
+        border-radius: 50px !important; font-weight: bold !important;
     }}
-    .stButton>button:hover {{ transform: scale(1.05); box-shadow: 0 0 15px #FF1493; }}
     </style>
     """, unsafe_allow_html=True)
 
-apply_custom_design()
+apply_lumina_theme()
 
-# --- 2. THE INTELLIGENT SCAFFOLDING ENGINE ---
-def analyze_content(text):
-    text = text.lower()
-    # IGCSE Math Logic
-    if any(m in text for m in ['algebra', 'solve', 'equation', 'x=', 'quadratic']):
-        return "MATH", "🔢", "Focus on balancing the equation. If you move a term across the '=', the sign (+/-) must flip!"
-    # IGCSE Science Logic
-    elif any(s in text for s in ['cell', 'mitosis', 'atom', 'energy', 'biology', 'physics']):
-        return "SCIENCE", "🧬", "Visualize the process as a factory. Each organelle or component has a single, vital job to keep the system running."
-    # Bahasa Malaysia (BM) Logic
-    elif any(b in text for b in ['karangan', 'imbuhan', 'peribahasa', 'tatabahasa']):
-        return "BM", "🇲🇾", "Ingat penggunaan Imbuhan 'me-' dan 'ber-'. Kenal pasti Kata Dasar terlebih dahulu sebelum membina ayat."
-    # English/General Logic
-    return "ENGLISH", "📖", "Break long sentences into three smaller ideas: Who, What, and Why. Focus on the keywords first."
+# --- 2. SCAFFOLDING LOGIC (IGCSE & BM) ---
+def get_subject_support(text):
+    t = text.lower()
+    if any(w in t for w in ['x', 'solve', 'equation', 'math', 'angle']):
+        return "🔢 **IGCSE Math Tip:** Focus on isolating the variable. Remember to perform the same operation on both sides of the '='."
+    elif any(w in t for w in ['cell', 'atom', 'energy', 'force', 'reaction']):
+        return "🧬 **IGCSE Science Tip:** Think about the 'Cause and Effect'. What is the energy transfer happening here?"
+    elif any(w in t for w in ['imbuhan', 'peribahasa', 'karangan', 'bahasa']):
+        return "🇲🇾 **Bantuan BM:** Kenal pasti subjek dan predikat. Gunakan imbuhan yang tepat untuk mengukuhkan ayat anda."
+    return "📖 **English/General Tip:** Break this paragraph into 3 main points: Who, What, and Why."
 
-# --- 3. HEADER & METRICS ---
+# --- 3. HEADER ---
 st.markdown("""
-    <div style="text-align: center; padding-bottom: 20px;">
-        <h1 style="font-size: 3rem; margin-bottom: 0;">Lumina AI</h1>
-        <p style="opacity: 0.7; letter-spacing: 2px;">EMPATHETIC ASSISTIVE TECHNOLOGY</p>
+    <div style="border: 2px solid #ffffff; border-radius: 15px; padding: 20px; text-align: center; background: rgba(255, 255, 255, 0.05); margin-bottom: 30px;">
+        <h1 style="margin: 0; font-size: 2.2rem;">Lumina AI</h1>
+        <p style="margin: 5px 0 0 0; opacity: 0.8;">Empathetic Assistive Technology for Inclusive Education</p>
     </div>
     """, unsafe_allow_html=True)
 
-m1, m2, m3 = st.columns(3)
-m1.metric("Study Session", f"{int((time.time() - st.session_state.start_time)/60)} mins")
-m2.metric("Frustration Triggers", len([l for l in st.session_state.test_logs if "Triggered" in l['Event']]))
-m3.metric("Scaffolding Ready", "Active ✅")
-
-st.divider()
-
-# --- 4. THE MAIN INTERFACE ---
-col_left, col_right = st.columns([1.3, 2])
+col_left, col_right = st.columns([1.4, 2])
 
 with col_left:
-    st.markdown("<div class='lumina-card'>", unsafe_allow_html=True)
-    st.subheader("👤 Perception Monitor")
+    st.subheader("👤 Perception Engine")
     
-    # Teachable Machine Camera Integration (Conceptual UI)
-    st.components.v1.html("""
-        <div style="background: #000; height: 300px; border-radius: 15px; border: 1px solid #FF1493; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-            <div style="font-size: 60px; filter: drop-shadow(0 0 10px #FF1493);">🤖</div>
-            <p style="color: #FF1493; font-family: sans-serif; font-weight: bold; margin-top: 10px;">AI EYE ACTIVE</p>
-            <div id="status" style="color: white; font-family: sans-serif;">Status: Analyzing Cues...</div>
+    tm_html = """
+    <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 15px; border: 2px solid white; text-align: center;">
+        <div id="robot-mascot" style="font-size: 90px; margin-bottom: 15px;">🤖</div>
+        <div id="webcam-container" style="margin: 0 auto 15px auto; width: 350px; height: 350px; border-radius: 20px; overflow: hidden; border: 2px solid white; background: #000;"></div>
+        <div id="label-container" style="font-family: sans-serif; font-weight: bold; font-size: 1.6rem; color: #ffffff;">System Ready</div>
+        <div style="display: flex; gap: 10px; margin-top: 25px;">
+            <button id="start-btn" type="button" onclick="init()" style="flex: 2; padding: 15px; background: linear-gradient(45deg, #FF1493, #9400D3); color: white; border: 2px solid white; border-radius: 30px; cursor: pointer; font-weight: bold;">🚀 Start Tracker</button>
         </div>
-    """, height=350)
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script type="text/javascript">
+        const URL = "https://teachablemachine.withgoogle.com/models/PGXyZqCEN/"; 
+        let model, webcam, isTracking = false;
+        let frustrationFrames = 0;
+
+        async function init() {
+            model = await tmImage.load(URL + "model.json", URL + "metadata.json");
+            webcam = new tmImage.Webcam(350, 350, true); 
+            await webcam.setup(); await webcam.play();
+            isTracking = true;
+            window.requestAnimationFrame(loop);
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            document.getElementById("start-btn").style.display = "none";
+        }
+        async function loop() { if(isTracking) { webcam.update(); await predict(); window.requestAnimationFrame(loop); } }
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            let best = {className: "", probability: 0};
+            prediction.forEach(p => { if(p.probability > best.probability) best = p; });
+            const labelDiv = document.getElementById("label-container");
+            const robotDiv = document.getElementById("robot-mascot");
+            labelDiv.innerHTML = "Status: " + best.className;
+            if(best.className === "Frustrated" && best.probability > 0.80) {
+                frustrationFrames++;
+                labelDiv.style.color = "#FF4B4B"; robotDiv.innerHTML = "🤔";
+                if(frustrationFrames > 40) {
+                    window.parent.postMessage({type: 'streamlit:set_component_value', value: "TRIGGER", key: 'face_trigger'}, "*");
+                    frustrationFrames = 0;
+                }
+            } else {
+                frustrationFrames = 0;
+                labelDiv.style.color = "#00FF7F"; robotDiv.innerHTML = "😊";
+            }
+        }
+    </script>
+    """
+    # The key 'face_trigger' matches the message sent from JS
+    face_signal = components.html(tm_html, height=600, key="face_tracker")
     
-    if not st.session_state.is_frustrated:
-        if st.button("🚨 Simulate IGCSE Barrier (Frustration)"):
-            st.session_state.is_frustrated = True
-            st.session_state.test_logs.append({"Timestamp": datetime.now().strftime("%H:%M:%S"), "Event": "Frustration Triggered"})
-            st.rerun()
-    else:
-        st.warning("⚠️ High Cognitive Load Detected. Material simplified below.")
-    st.markdown("</div>", unsafe_allow_html=True)
+    if face_signal == "TRIGGER" and not st.session_state.is_frustrated:
+        st.session_state.is_frustrated = True
+        st.session_state.test_logs.append({"Timestamp": datetime.now().strftime("%H:%M:%S"), "Event": "Frustration Detected"})
+        st.rerun()
 
 with col_right:
-    tab1, tab2, tab3 = st.tabs(["📄 Material Input", "💡 Adaptive Scaffolding", "📈 Research Data"])
+    tab1, tab2, tab3 = st.tabs(["🖥️ Shared Material", "💡 Adaptive Notes", "📊 Research Logs"])
     
     with tab1:
-        st.markdown("<div class='lumina-card'>", unsafe_allow_html=True)
-        st.write("Paste your IGCSE Math, Science, or BM notes below:")
-        user_input = st.text_area("Learning Content", placeholder="e.g., Solve the quadratic equation x^2 + 5x + 6 = 0...", height=250)
-        
-        if user_input:
-            subject, icon, tip = analyze_content(user_input)
-            st.session_state.subject_mode = f"{icon} {subject}"
-            st.info(f"Subject Identified: **{st.session_state.subject_mode}**")
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("### Desktop Scaffolding View")
+        ocr_js = """
+            <div style="background: #000; border: 2px solid white; border-radius: 15px; padding: 10px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <button id="cast-btn" style="flex: 1; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 10px; font-weight: bold;">🌐 Cast Screen</button>
+                    <button id="ocr-btn" style="flex: 1; padding: 12px; background: #2980b9; color: white; border: none; border-radius: 10px; font-weight: bold;">📄 Analyze Text</button>
+                </div>
+                <video id="v" autoplay style="width: 100%; height: 320px; border-radius: 10px;"></video>
+            </div>
+            <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+            <script>
+                const video = document.getElementById('v');
+                document.getElementById('cast-btn').onclick = async () => {
+                    video.srcObject = await navigator.mediaDevices.getDisplayMedia({video: true});
+                };
+                document.getElementById('ocr-btn').onclick = async () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    const result = await Tesseract.recognize(canvas, 'eng');
+                    // Sending the actual text string back to Streamlit
+                    window.parent.postMessage({type: 'streamlit:set_component_value', value: result.data.text, key: 'ocr_bridge'}, "*");
+                };
+            </script>
+        """
+        # We catch the text signal here
+        ocr_signal = components.html(ocr_js, height=450, key="ocr_component")
+        if ocr_signal and isinstance(ocr_signal, str):
+            st.session_state.extracted_text = ocr_signal
 
     with tab2:
-        if st.session_state.is_frustrated and user_input:
-            subject, icon, tip = analyze_content(user_input)
+        if st.session_state.is_frustrated:
+            st.warning("🤖 Lumina: Barrier Detected! Simplification Active.")
+            
+            # Clean string conversion to avoid DeltaGenerator errors
+            display_text = str(st.session_state.extracted_text)
+            support_tip = get_subject_support(display_text)
+            
             st.markdown(f"""
-                <div style="background: rgba(255, 20, 147, 0.1); border-left: 10px solid #FF1493; padding: 30px; border-radius: 15px;">
-                    <h2 style="color: #FF1493; margin-top: 0;">{icon} Lumina Adaptive Support</h2>
-                    <p style="font-size: 1.2rem;"><b>Subject:</b> {subject} IGCSE</p>
-                    <hr style="border: 0.5px solid rgba(255,255,255,0.2);">
-                    <h4 style="color: #00FF7F;">💡 Pro-Tip:</h4>
-                    <p style="font-size: 1.1rem;">{tip}</p>
-                    <br>
-                    <p><b>Quick Summary:</b></p>
-                    <ul>
-                        <li>Step 1: Identify keywords in the first sentence.</li>
-                        <li>Step 2: Ignore the complex numbers for a second; what is the core question?</li>
-                    </ul>
-                </div>
+            <div style="background: rgba(255,20,147,0.1); padding: 20px; border-radius: 15px; border-left: 8px solid #FF1493;">
+                <h3>📖 Easy Mode Summary</h3>
+                <p style="font-size: 0.9rem; opacity:0.8;"><b>Original context:</b> {display_text[:150]}...</p>
+                <hr style="opacity: 0.3;">
+                <h4 style="color: #FFD700;">{support_tip}</h4>
+                <ul>
+                    <li>Lumina has identified a cognitive hurdle.</li>
+                    <li>Read the tip above and try the problem again slowly.</li>
+                </ul>
+            </div>
             """, unsafe_allow_html=True)
             
-            if st.button("✅ I Got It! Resume Analysis"):
+            if st.button("✅ I understand now!"):
                 st.session_state.is_frustrated = False
-                st.session_state.test_logs.append({"Timestamp": datetime.now().strftime("%H:%M:%S"), "Event": "Success: Scaffold Cleared"})
                 st.rerun()
-        elif st.session_state.is_frustrated and not user_input:
-            st.warning("Please paste content into Tab 1 first so Lumina can assist you.")
         else:
-            st.success("Lumina is silent. You are currently in a high-focus 'Flow State'.")
+            st.info("Status: **Monitoring Mode**. Content will simplify if frustration is detected.")
 
     with tab3:
-        st.markdown("<div class='lumina-card'>", unsafe_allow_html=True)
-        st.subheader("MSc Validation Log")
         if st.session_state.test_logs:
-            df = pd.DataFrame(st.session_state.test_logs)
-            st.dataframe(df, use_container_width=True)
-            csv = df.to_csv(index=False).encode('utf-8')
-            st.download_button("📥 Download Research Log", csv, "lumina_validation.csv", "text/csv")
-        else:
-            st.write("No events logged yet. Start studying!")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-# --- 5. SIDEBAR INFO ---
-st.sidebar.title("Lumina Control")
-st.sidebar.write(f"**Student:** Aisyah Sofia")
-st.sidebar.write(f"**Research Site:** UTP")
-st.sidebar.divider()
-st.sidebar.progress(len(st.session_state.test_logs) * 10 if len(st.session_state.test_logs) < 10 else 100)
-st.sidebar.caption("Project Progress towards Submission")
+            st.table(pd.DataFrame(st.session_state.test_logs))
