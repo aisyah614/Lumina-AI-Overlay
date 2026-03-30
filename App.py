@@ -1,127 +1,183 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime
-import cv2
-import numpy as np
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
-from deepface import DeepFace
 
-# --- 1. SYSTEM CONFIGURATION ---
-st.set_page_config(page_title="Lumina AI | Research Hub", layout="wide", page_icon="🤖")
+# --- 1. INTERFACE & DATA SESSION CONFIG ---
+st.set_page_config(page_title="Lumina AI | Research Framework", layout="wide", page_icon="🤖")
 
-# Initialize Session States (The persistent memory of the AI)
+# Initialize Session States
 if 'is_frustrated' not in st.session_state:
     st.session_state.is_frustrated = False
 if 'test_logs' not in st.session_state:
     st.session_state.test_logs = []
-if 'current_text' not in st.session_state:
-    # This acts as a fallback to prevent the TypeError you saw earlier
-    st.session_state.current_text = "Photosynthesis is a complex biochemical process where chlorophyll-containing organisms convert light energy into chemical energy, synthesizing glucose from carbon dioxide and water molecules via the Calvin Cycle..."
-if 'detected_emotion' not in st.session_state:
-    st.session_state.detected_emotion = "Neutral"
+if 'extracted_text' not in st.session_state:
+    st.session_state.extracted_text = "No text extracted yet. Share your screen and click 'Analyze Screen'."
 
-# --- 2. EMOTION PERCEPTION ENGINE ---
-class EmotionProcessor(VideoTransformerBase):
-    def __init__(self):
-        self.last_emo = "Neutral"
+def apply_lumina_theme():
+    bg_url = "https://raw.githubusercontent.com/AisyahSofia/Lumina-AI/main/classroom_bg.jpg"
+    st.markdown(f"""
+    <style>
+    .stApp {{
+        background: linear-gradient(rgba(26, 10, 46, 0.88), rgba(13, 0, 26, 0.88)), url("{bg_url}");
+        background-size: cover; background-attachment: fixed; color: #ffffff;
+    }}
+    [data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {{
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(15px);
+        border-radius: 20px;
+        padding: 30px;
+        border: 2px solid #ffffff; 
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }}
+    .stButton>button {{
+        background: linear-gradient(45deg, #FF1493, #9400D3) !important;
+        color: white !important;
+        border: 2px solid #ffffff !important;
+        border-radius: 50px !important;
+        font-weight: bold !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
 
-    def transform(self, frame):
-        img = frame.to_ndarray(format="bgr24")
-        try:
-            # High-accuracy DeepFace analysis (optimized for real-time)
-            results = DeepFace.analyze(img, actions=['emotion'], enforce_detection=False, silent=True)
-            emo = results[0]['dominant_emotion']
-            
-            # Research Logic: Map specific facial cues to 'Frustrated' status
-            if emo in ['angry', 'sad', 'fear', 'surprise']:
-                self.last_emo = "Frustrated"
-            elif emo == 'happy':
-                self.last_emo = "Happy"
-            else:
-                self.last_emo = "Neutral"
-            
-            # Draw visual feedback directly on the video stream
-            color = (0, 0, 255) if self.last_emo == "Frustrated" else (0, 255, 0)
-            cv2.putText(img, f"Lumina Detect: {self.last_emo}", (20, 50), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
-        except:
-            pass
-        
-        # Bridge the data back to the Streamlit UI Session State
-        st.session_state.detected_emotion = self.last_emo
-        return img
+apply_lumina_theme()
 
-# --- 3. UI THEME & HEADER ---
+# --- 2. HEADER ---
 st.markdown("""
     <div style="border: 2px solid #ffffff; border-radius: 15px; padding: 20px; text-align: center; background: rgba(255, 255, 255, 0.05); margin-bottom: 30px;">
         <h1 style="margin: 0; font-size: 2.2rem;">Lumina AI</h1>
-        <p style="margin: 5px 0 0 0; opacity: 0.8;">Empathetic Scaffolding: Monitoring Cognitive Friction in Real-Time</p>
+        <p style="margin: 5px 0 0 0; opacity: 0.8;">Empathetic Assistive Technology for Inclusive Education</p>
     </div>
     """, unsafe_allow_html=True)
 
-col_left, col_right = st.columns([1.2, 2])
+col_left, col_right = st.columns([1.4, 2])
 
-# --- 4. LEFT COLUMN: PERCEPTION ---
 with col_left:
     st.subheader("👤 Perception Engine")
     
-    # Logic: Only run camera if not currently in "Scaffolded Mode"
-    if not st.session_state.is_frustrated:
-        webrtc_streamer(key="lumina-percept", video_transformer_factory=EmotionProcessor)
+    # --- FIXED TEACHABLE MACHINE INTEGRATION ---
+    tm_html = """
+    <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 15px; border: 2px solid white; text-align: center;">
+        <div id="robot-mascot" style="font-size: 90px; margin-bottom: 15px;">🤖</div>
+        <div id="webcam-container" style="margin: 0 auto 15px auto; width: 350px; height: 350px; border-radius: 20px; overflow: hidden; border: 2px solid white; background: #000;"></div>
+        <div id="label-container" style="font-family: sans-serif; font-weight: bold; font-size: 1.6rem; color: #ffffff;">System Ready</div>
         
-        current_status = st.session_state.detected_emotion
-        st.metric("Status", current_status)
-
-        # Trigger logic: If frustration persists, activate scaffolding
-        if current_status == "Frustrated":
-            st.session_state.is_frustrated = True
-            st.session_state.test_logs.append({
-                "Timestamp": datetime.now().strftime("%H:%M:%S"),
-                "State": "Frustrated",
-                "Action": "Simplification Triggered"
-            })
-            st.rerun()
-    else:
-        st.success("✅ Scaffolding Active")
-        st.info("The Perception Engine is paused to allow you to focus on the simplified material.")
-
-# --- 5. RIGHT COLUMN: ADAPTIVE CONTENT ---
-with col_right:
-    # SAFE SLICING: Prevents the TypeError current_text[:500]
-    raw_text = str(st.session_state.current_text) if st.session_state.current_text else "No content available."
-    
-    if st.session_state.is_frustrated:
-        st.warning("🤖 Lumina: I noticed you're stuck. Here is the Simple Version:")
-        st.markdown(f"""
-        <div style="background: rgba(255,20,147,0.1); padding: 25px; border-radius: 15px; border-left: 10px solid #FF1493;">
-            <h3>📖 Easy Mode: Simplified Summary</h3>
-            <p>I’ve broken down the difficult text into easy points:</p>
-            <ul>
-                <li><b>Concept:</b> Plants eat <b>Sunlight</b> to make food.</li>
-                <li><b>Process:</b> They use Chlorophyll (green color) as solar panels.</li>
-                <li><b>Result:</b> They make sugar for themselves and <b>Oxygen</b> for us to breathe!</li>
-            </ul>
-            <hr style="opacity: 0.2;">
-            <p style="font-size: 0.9rem; opacity: 0.7;">Original Text Sample: "{raw_text[:80]}..."</p>
+        <div style="display: flex; gap: 10px; margin-top: 25px;">
+            <button id="start-btn" type="button" onclick="init()" style="flex: 2; padding: 15px; background: linear-gradient(45deg, #FF1493, #9400D3); color: white; border: 2px solid white; border-radius: 30px; cursor: pointer; font-weight: bold;">🚀 Start Tracker</button>
         </div>
-        """, unsafe_allow_html=True)
-        
-        if st.button("✅ I understand now! Resume Analysis"):
-            st.session_state.is_frustrated = False
-            st.session_state.detected_emotion = "Neutral" # Reset detection state
-            st.rerun()
-    else:
-        st.subheader("📖 Academic Material")
-        # Displays the first 500 characters of the complex text safely
-        st.write(raw_text[:500] + "...")
-        st.info("💡 Lumina is monitoring your facial cues. If you look frustrated, I will simplify this text for you.")
+    </div>
 
-# --- 6. RESEARCH LOGS (Chapter 4: Results) ---
-with st.expander("📊 View Research Validation Logs"):
-    if st.session_state.test_logs:
-        log_df = pd.DataFrame(st.session_state.test_logs)
-        st.table(log_df)
-        csv = log_df.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Download Research Log (CSV)", csv, "lumina_results.csv", "text/csv")
-    else:
-        st.write("No events recorded yet. Start the tracker to begin.")
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script type="text/javascript">
+        const URL = "https://teachablemachine.withgoogle.com/models/PGXyZqCEN/"; 
+        let model, webcam, isTracking = false;
+        let frustrationFrames = 0;
+
+        async function init() {
+            model = await tmImage.load(URL + "model.json", URL + "metadata.json");
+            webcam = new tmImage.Webcam(350, 350, true); 
+            await webcam.setup(); await webcam.play();
+            isTracking = true;
+            window.requestAnimationFrame(loop);
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            document.getElementById("start-btn").style.display = "none";
+        }
+
+        async function loop() { if(isTracking) { webcam.update(); await predict(); window.requestAnimationFrame(loop); } }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            let best = {className: "", probability: 0};
+            prediction.forEach(p => { if(p.probability > best.probability) best = p; });
+            
+            const labelDiv = document.getElementById("label-container");
+            const robotDiv = document.getElementById("robot-mascot");
+            
+            labelDiv.innerHTML = "Status: " + best.className;
+            
+            if(best.className === "Frustrated" && best.probability > 0.80) {
+                frustrationFrames++;
+                labelDiv.style.color = "#FF4B4B"; robotDiv.innerHTML = "🤔";
+                // Trigger after ~2 seconds of continuous frustration
+                if(frustrationFrames > 40) {
+                    window.parent.postMessage({type: 'streamlit:set_component_value', value: "TRIGGER", key: 'face_trigger'}, "*");
+                    frustrationFrames = 0;
+                }
+            } else {
+                frustrationFrames = 0;
+                labelDiv.style.color = "#00FF7F"; robotDiv.innerHTML = "😊";
+            }
+        }
+    </script>
+    """
+    face_signal = components.html(tm_html, height=600)
+    
+    # Handle the trigger from JS to Python
+    if face_signal == "TRIGGER" and not st.session_state.is_frustrated:
+        st.session_state.is_frustrated = True
+        st.session_state.test_logs.append({"Timestamp": datetime.now().strftime("%H:%M:%S"), "Event": "Frustration Detected"})
+        st.rerun()
+
+with col_right:
+    tab1, tab2, tab3 = st.tabs(["🖥️ Shared Material", "💡 Adaptive Notes", "📊 Research Logs"])
+    
+    with tab1:
+        st.markdown("### Desktop Scaffolding View")
+        ocr_js = """
+            <div style="background: #000; border: 2px solid white; border-radius: 15px; padding: 10px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <button id="cast-btn" style="flex: 1; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 10px; font-weight: bold;">🌐 Cast Screen</button>
+                    <button id="ocr-btn" style="flex: 1; padding: 12px; background: #2980b9; color: white; border: none; border-radius: 10px; font-weight: bold;">📄 Analyze Text</button>
+                </div>
+                <video id="v" autoplay style="width: 100%; height: 320px; border-radius: 10px;"></video>
+            </div>
+            <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+            <script>
+                const video = document.getElementById('v');
+                document.getElementById('cast-btn').onclick = async () => {
+                    video.srcObject = await navigator.mediaDevices.getDisplayMedia({video: true});
+                };
+                document.getElementById('ocr-btn').onclick = async () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    const result = await Tesseract.recognize(canvas, 'eng');
+                    window.parent.postMessage({type: 'streamlit:set_component_value', value: result.data.text, key: 'ocr_bridge'}, "*");
+                };
+            </script>
+        """
+        # Capturing OCR return value safely
+        ocr_return = components.html(ocr_js, height=450)
+        if ocr_return:
+            st.session_state.extracted_text = str(ocr_return)
+
+    with tab2:
+        if st.session_state.is_frustrated:
+            st.warning("🤖 Lumina: Barrier Detected! Simplification Active.")
+            
+            # SAFE SLICING: Ensuring we only slice strings
+            display_text = str(st.session_state.extracted_text)
+            
+            st.markdown(f"""
+            <div style="background: rgba(255,20,147,0.1); padding: 20px; border-radius: 15px; border-left: 8px solid #FF1493;">
+                <h3>📖 Easy Mode Summary</h3>
+                <p><b>Context captured:</b> {display_text[:200]}...</p>
+                <hr>
+                <ul>
+                    <li>The system has identified high cognitive load.</li>
+                    <li>Key terms are being simplified into bullet points.</li>
+                    <li>Take a deep breath and review the points below.</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button("✅ I understand now!"):
+                st.session_state.is_frustrated = False
+                st.rerun()
+        else:
+            st.info("Status: **Monitoring Mode**. Content will simplify if frustration is detected.")
+
+    with tab3:
+        if st.session_state.test_logs:
+            st.table(pd.DataFrame(st.session_state.test_logs))
