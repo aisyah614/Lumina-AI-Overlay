@@ -65,6 +65,8 @@ if 'detected_subject' not in st.session_state:
     st.session_state.detected_subject = None
 if 'ai_simplified_bullets' not in st.session_state:
     st.session_state.ai_simplified_bullets = None
+if 'youtube_link' not in st.session_state:
+    st.session_state.youtube_link = None
 
 def detect_igcse_topic(text):
     if not text:
@@ -473,6 +475,7 @@ with col_right:
             if topic:
                 st.session_state.detected_subject = subject
                 st.session_state.detected_topic = topic
+                st.session_state.youtube_link = youtube_link
                 st.info(f"🎯 **Detected:** {subject} - {topic.title()}")
             else:
                 st.warning("⚠️ Could not auto-detect topic. AI simplification will be used.")
@@ -483,10 +486,16 @@ with col_right:
         with st.expander("🔧 Debug Information"):
             st.write(f"**Session State 'extracted_text':** {len(st.session_state.extracted_text)} characters")
             st.write(f"**Text Content:** {st.session_state.extracted_text[:200] if st.session_state.extracted_text else 'EMPTY'}")
+            st.write(f"**Detected Topic:** {st.session_state.detected_topic if st.session_state.detected_topic else 'NONE'}")
+            st.write(f"**YouTube Link:** {st.session_state.youtube_link if st.session_state.youtube_link else 'NONE'}")
             st.write(f"**Transformer Model:** {'✅ Yes (BART)' if HAS_TRANSFORMERS else '❌ No (fallback)'}")
             
             if st.button("🔄 Test with Sample Text"):
-                st.session_state.extracted_text = "Vertebrates are animals that have a backbone. The five main types of vertebrates are fish, amphibians, reptiles, birds, and mammals. All vertebrates have a backbone that protects the spinal cord."
+                st.session_state.extracted_text = "Vertebrates are animals that have a backbone. The five main types of vertebrates are fish, amphibians, reptiles, birds, and mammals."
+                subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
+                st.session_state.detected_topic = topic
+                st.session_state.detected_subject = subject
+                st.session_state.youtube_link = youtube_link
                 st.success("Test text added!")
                 st.rerun()
 
@@ -500,10 +509,15 @@ with col_right:
             st.warning("⚠️ **Lumina Detected Learning Barrier** - Simplification Mode Active")
             
             if debug_has_text:
-                subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
+                # Re-detect topic if not already detected
+                if not st.session_state.detected_topic:
+                    subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
+                    st.session_state.detected_subject = subject
+                    st.session_state.detected_topic = topic
+                    st.session_state.youtube_link = youtube_link
                 
-                if topic:
-                    content = simplify_content(st.session_state.extracted_text, topic)
+                if st.session_state.detected_topic:
+                    content = simplify_content(st.session_state.extracted_text, st.session_state.detected_topic)
                     st.markdown(f"""
                     <div style="background: rgba(255,20,147,0.15); padding: 30px; border-radius: 15px; border-left: 10px solid #FF1493;">
                         <h2 style="margin-top:0; color: #FF1493;">{content['title']}</h2>
@@ -567,7 +581,7 @@ with col_right:
             col_btn1, col_btn2, col_btn3 = st.columns(3)
             
             with col_btn1:
-                if st.button("�� I Understand!", key="understand_btn", use_container_width=True):
+                if st.button("✅ I Understand!", key="understand_btn", use_container_width=True):
                     st.session_state.is_frustrated = False
                     st.session_state.frustration_confirmed = True
                     st.session_state.test_logs.append({
@@ -580,21 +594,25 @@ with col_right:
             
             with col_btn2:
                 if st.button("🆘 Need Help", key="help_btn", use_container_width=True):
-                    if st.session_state.detected_topic:
-                        subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
+                    # FIX: Always re-detect to ensure we have the YouTube link
+                    subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
+                    
+                    if youtube_link:
                         st.session_state.test_logs.append({
                             "Timestamp": datetime.now().strftime("%H:%M:%S"),
                             "Event": "Help Requested",
-                            "Topic": st.session_state.detected_topic,
+                            "Topic": topic,
                             "YouTube Link": youtube_link
                         })
                         st.markdown(f"""
                         <div style="background: rgba(52,152,219,0.2); padding: 20px; border-radius: 15px; border-left: 5px solid #3498db;">
-                            <h3>📺 Video Tutorial for {st.session_state.detected_topic.title()}</h3>
+                            <h3>📺 Video Tutorial for {topic.title()}</h3>
                             <p><a href="{youtube_link}" target="_blank" style="color: #00BFFF; font-weight: bold; font-size: 1.2rem;">👉 WATCH EXPLANATION VIDEO</a></p>
-                            <p style="opacity: 0.9;">This video explains {st.session_state.detected_topic} step by step.</p>
+                            <p style="opacity: 0.9;">This video explains {topic} step by step. You can pause, rewind, and watch as many times as you need!</p>
                         </div>
                         """, unsafe_allow_html=True)
+                    else:
+                        st.error("❌ Could not find YouTube link for this topic. Please extract clear text from your learning material.")
             
             with col_btn3:
                 if st.button("📧 Email Teacher", key="email_btn", use_container_width=True):
@@ -613,6 +631,8 @@ with col_right:
                 st.session_state.frustration_confirmed = False
                 st.session_state.extracted_text = ""
                 st.session_state.detected_topic = None
+                st.session_state.detected_subject = None
+                st.session_state.youtube_link = None
                 st.session_state.ai_simplified_bullets = None
                 st.rerun()
         
@@ -685,6 +705,8 @@ with st.sidebar.expander("⚙️ Advanced Settings"):
             st.session_state.frustration_confirmed = False
             st.session_state.extracted_text = ""
             st.session_state.detected_topic = None
+            st.session_state.detected_subject = None
+            st.session_state.youtube_link = None
             st.session_state.ai_simplified_bullets = None
             st.rerun()
 
@@ -696,9 +718,10 @@ st.sidebar.markdown("""
     ✅ Text Extraction: Ready<br>
     ✅ Topic Detection: Ready<br>
     ✅ AI Simplification: Ready<br>
+    ✅ YouTube Links: Ready<br>
     ✅ Scaffolding: Enabled<br>
     <br>
     🔗 Integration: @DaniyalAhmedKhan1234<br>
-    <i>Version 4.1 | Lumina AI</i>
+    <i>Version 4.2 | Lumina AI</i>
 </div>
 """, unsafe_allow_html=True)
