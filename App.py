@@ -4,6 +4,16 @@ import pandas as pd
 from datetime import datetime
 import json
 
+# Try to import transformers for text simplification (install with: pip install transformers torch)
+try:
+    from transformers import pipeline
+    HAS_TRANSFORMERS = True
+    # Initialize the simplification pipeline
+    simplifier = pipeline("text2text-generation", model="facebook/bart-large-cnn")
+except:
+    HAS_TRANSFORMERS = False
+    simplifier = None
+
 # --- 1. INTERFACE & DATA SESSION CONFIG ---
 st.set_page_config(page_title="Lumina AI | Research Framework", layout="wide", page_icon="🤖")
 
@@ -46,7 +56,7 @@ IGCSE_TOPICS = {
     }
 }
 
-# INITIALIZE SESSION STATES - MUST BE AT TOP BEFORE ANY LOGIC
+# INITIALIZE SESSION STATES
 if 'is_frustrated' not in st.session_state:
     st.session_state.is_frustrated = False
 if 'test_logs' not in st.session_state:
@@ -69,7 +79,6 @@ def detect_igcse_topic(text):
     
     text_lower = text.lower()
     
-    # Check for matches
     for subject, topics in IGCSE_TOPICS.items():
         for topic, youtube_link in topics.items():
             if topic in text_lower:
@@ -77,60 +86,63 @@ def detect_igcse_topic(text):
     
     return None, None, None
 
-def generate_bullet_points(text):
-    """Generate simplified bullet points from academic text."""
+def simplify_with_ai(text):
+    """
+    Simplify text using Hugging Face transformer model.
+    Falls back to sentence-based simplification if model unavailable.
+    """
     if not text or len(text.strip()) < 20:
         return ["Unable to process text. Please provide more content."]
     
+    # Try using the transformer model
+    if HAS_TRANSFORMERS and simplifier:
+        try:
+            # Summarize/simplify the text
+            result = simplifier(text, max_length=150, min_length=50, do_sample=False)
+            simplified_text = result[0]['summary_text']
+            
+            # Convert to bullet points
+            sentences = simplified_text.split('. ')
+            bullets = []
+            for sentence in sentences:
+                sentence = sentence.strip()
+                if sentence:
+                    # Add emoji
+                    emoji = "📌"
+                    if any(word in sentence.lower() for word in ["important", "key", "essential"]):
+                        emoji = "⭐"
+                    elif any(word in sentence.lower() for word in ["example", "such as"]):
+                        emoji = "📝"
+                    elif any(word in sentence.lower() for word in ["result", "outcome"]):
+                        emoji = "✅"
+                    
+                    bullets.append(f"{emoji} {sentence}")
+            
+            return bullets if bullets else fallback_simplify(text)
+        except:
+            return fallback_simplify(text)
+    else:
+        return fallback_simplify(text)
+
+def fallback_simplify(text):
+    """Fallback simplification using pattern matching"""
     bullets = []
     sentences = text.replace('!', '.').replace('?', '.').split('.')
-    sentences = [s.strip() for s in sentences if s.strip()]
+    sentences = [s.strip() for s in sentences if s.strip() and len(s.strip()) > 15]
     
-    if len(sentences) == 0:
-        return ["The provided text could not be processed."]
+    for sentence in sentences[:6]:
+        if len(sentence) > 80:
+            sentence = sentence[:77] + "..."
+        
+        emoji = "📌"
+        if any(word in sentence.lower() for word in ["important", "key"]):
+            emoji = "⭐"
+        elif any(word in sentence.lower() for word in ["example"]):
+            emoji = "📝"
+        
+        bullets.append(f"{emoji} {sentence}")
     
-    for i, sentence in enumerate(sentences[:6]):
-        if len(sentence) > 15:
-            simplified = simplify_sentence(sentence)
-            if simplified:
-                bullets.append(simplified)
-    
-    if bullets:
-        return bullets
-    else:
-        return ["Key point 1: " + sentences[0][:60] + "..." if sentences else "Content detected but unclear"]
-
-def simplify_sentence(sentence):
-    """Simplify a sentence into a bullet point"""
-    sentence = sentence.strip()
-    sentence = sentence.split('[')[0].strip()
-    
-    if len(sentence) > 80:
-        sentence = sentence[:77] + "..."
-    
-    emoji_map = {
-        "important": "⭐",
-        "key": "🔑",
-        "process": "🔄",
-        "definition": "📖",
-        "example": "📝",
-        "result": "✅",
-        "energy": "⚡",
-        "organism": "🧬",
-        "system": "⚙️",
-        "structure": "🏗️",
-        "change": "🔀",
-        "reaction": "💥",
-        "method": "📊",
-    }
-    
-    emoji = "📌"
-    for keyword, emoj in emoji_map.items():
-        if keyword in sentence.lower():
-            emoji = emoj
-            break
-    
-    return f"{emoji} {sentence}"
+    return bullets if bullets else ["Unable to simplify text at this time."]
 
 def simplify_content(text, topic):
     """Generate simplified content based on detected topic"""
@@ -226,12 +238,10 @@ def simplify_content(text, topic):
         }
     }
     
-    # Try to find a matching simplification
     for key, value in simplifications.items():
         if key in topic.lower():
             return value
     
-    # Default if no match
     return {
         "title": f"📚 Understanding {topic.title()}",
         "bullets": [
@@ -319,7 +329,6 @@ with col_left:
         
         let currentState = "neutral";
         let triggerLocked = false;
-        let totalFrames = 0;
 
         async function init() {
             try {
@@ -359,7 +368,6 @@ with col_left:
             const frameDiv = document.getElementById("frame-counter");
             const robotDiv = document.getElementById("robot-mascot");
             
-            totalFrames++;
             confDiv.innerHTML = "Confidence: " + (best.probability * 100).toFixed(1) + "%";
             labelDiv.innerHTML = "Status: " + best.className;
             frameDiv.innerHTML = currentState.toUpperCase() + " Frames: " + (currentState === "frustrated" ? frustrationFrameCount : neutralFrameCount) + "/" + (currentState === "frustrated" ? FRUSTRATION_THRESHOLD : NEUTRAL_THRESHOLD);
@@ -413,9 +421,10 @@ with col_left:
         st.session_state.is_frustrated = True
         st.session_state.frustration_confirmed = False
         
-        # IMPORTANT: Generate AI bullet points from CURRENT extracted text
+        # Generate AI simplified bullets when frustration detected
         if st.session_state.extracted_text and len(st.session_state.extracted_text.strip()) > 50:
-            st.session_state.ai_simplified_bullets = generate_bullet_points(st.session_state.extracted_text)
+            with st.spinner("🔄 Simplifying content..."):
+                st.session_state.ai_simplified_bullets = simplify_with_ai(st.session_state.extracted_text)
         
         log_entry = {
             "Timestamp": datetime.now().strftime("%H:%M:%S"),
@@ -474,13 +483,12 @@ with col_right:
                     try {
                         const result = await Tesseract.recognize(canvas, 'eng');
                         const extractedText = result.data.text || "";
-                        console.log("OCR Result:", extractedText);
                         
-                        if(extractedText && extractedText.trim().length > 0) {
+                        if(extractedText && extractedText.trim().length > 20) {
                             window.parent.postMessage({
                                 type: 'streamlit:set_component_value', 
-                                value: extractedText, 
-                                key: 'ocr_bridge'
+                                value: extractedText.trim(), 
+                                key: 'ocr_text_result'
                             }, "*");
                             statusDiv.innerHTML = "✅ Text extracted! " + extractedText.length + " characters found.";
                         } else {
@@ -493,54 +501,51 @@ with col_right:
             </script>
         """
         
-        ocr_return = components.html(ocr_html, height=500)
+        ocr_return = components.html(ocr_html, height=500, key="ocr_component")
         
-        # FIX: Store OCR text immediately and force rerun
+        st.write("---")
+        st.subheader("📝 Text Processing")
+        
         if ocr_return and isinstance(ocr_return, str) and len(ocr_return.strip()) > 20:
-            st.session_state.extracted_text = ocr_return
-            st.success(f"✅ Text extracted! ({len(ocr_return)} characters)")
+            st.session_state.extracted_text = ocr_return.strip()
+            st.success(f"✅ **SUCCESS!** Text stored: {len(ocr_return)} characters")
             
-            # Auto-detect IGCSE topic
             subject, topic, youtube_link = detect_igcse_topic(ocr_return)
             if topic:
                 st.session_state.detected_subject = subject
                 st.session_state.detected_topic = topic
                 st.info(f"🎯 **Detected:** {subject} - {topic.title()}")
             else:
-                st.warning("⚠️ Could not auto-detect topic. Will use AI simplification.")
-            
-            # FORCE RERUN to ensure state propagates to other tabs
-            st.info("📌 Text is ready! Now you can make a frustrated face for 3 seconds to see the simplified version.")
+                st.warning("⚠️ Could not auto-detect topic. AI simplification will be used.")
+        else:
+            st.info("⏳ Waiting for OCR extraction... Extract text from your screen above.")
         
-        # Debug: Show current extracted text
         st.markdown("---")
-        with st.expander("📋 Debug: Current Extracted Text"):
-            if st.session_state.extracted_text:
-                st.write(f"**Status:** ✅ Text is stored in session state")
-                st.write(f"**Length:** {len(st.session_state.extracted_text)} characters")
-                st.write(f"**Preview:** {st.session_state.extracted_text[:300]}")
-            else:
-                st.write("❌ No text extracted yet")
+        with st.expander("🔧 Debug Information"):
+            st.write(f"**Session State 'extracted_text':** {len(st.session_state.extracted_text)} characters")
+            st.write(f"**Text Content:** {st.session_state.extracted_text[:200] if st.session_state.extracted_text else 'EMPTY'}")
+            st.write(f"**Transformer Model Available:** {'✅ Yes' if HAS_TRANSFORMERS else '❌ No (fallback mode)'}")
+            
+            if st.button("🔄 Manually Test State Update"):
+                st.session_state.extracted_text = "TEST: Vertebrates are animals that have a backbone. The five main types of vertebrates are fish, amphibians, reptiles, birds, and mammals..."
+                st.success("Manual test text added!")
+                st.rerun()
 
     with tab2:
         st.subheader("🤖 Adaptive Support Dashboard")
         
-        # Debug info
         debug_text = st.session_state.extracted_text if st.session_state.extracted_text else ""
         debug_has_text = len(debug_text.strip()) > 10 if debug_text else False
         
         if st.session_state.is_frustrated and not st.session_state.frustration_confirmed:
             st.warning("⚠️ **Lumina Detected Learning Barrier** - Simplification Mode Active")
             
-            # CHECK IF WE HAVE REAL EXTRACTED TEXT
             has_text = debug_has_text
             
             if has_text:
-                # Detect topic from the extracted text
                 subject, topic, youtube_link = detect_igcse_topic(st.session_state.extracted_text)
                 
                 if topic:
-                    # Generate simplified content
                     content = simplify_content(st.session_state.extracted_text, topic)
                     
                     st.markdown(f"""
@@ -564,23 +569,21 @@ with col_right:
                     </div>
                     """, unsafe_allow_html=True)
                 else:
-                    # Show AI-generated bullet points from the extracted text
+                    # Show AI-generated bullet points using transformer model
                     st.markdown(f"""
                     <div style="background: rgba(255,20,147,0.15); padding: 30px; border-radius: 15px; border-left: 10px solid #FF1493;">
-                        <h2 style="margin-top:0; color: #FF1493;">📖 Academic Text Simplification</h2>
+                        <h2 style="margin-top:0; color: #FF1493;">📖 AI-Powered Academic Simplification</h2>
                         <p><b>Content detected:</b> {st.session_state.extracted_text[:200]}...</p>
                         <hr style="opacity: 0.3;">
                         <h3>📌 Key Points in Simple Language:</h3>
                         <ul style="font-size: 1.1rem; line-height: 2.2;">
                     """, unsafe_allow_html=True)
                     
-                    # Display AI-generated bullets
                     if st.session_state.ai_simplified_bullets:
                         for bullet in st.session_state.ai_simplified_bullets:
                             st.markdown(f"<li>{bullet}</li>", unsafe_allow_html=True)
                     else:
-                        # Fallback: generate on the spot
-                        bullets = generate_bullet_points(st.session_state.extracted_text)
+                        bullets = simplify_with_ai(st.session_state.extracted_text)
                         for bullet in bullets:
                             st.markdown(f"<li>{bullet}</li>", unsafe_allow_html=True)
                     
@@ -588,7 +591,7 @@ with col_right:
                         </ul>
                         <hr style="opacity: 0.3;">
                         <p style="font-size: 1.1rem; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; font-style: italic;">
-                            💪 <b>These points summarize the key ideas from your text. Take your time reviewing them!</b>
+                            💪 <b>{'Using AI model for simplification' if HAS_TRANSFORMERS else 'Using pattern-based simplification'}. Take your time reviewing the key points!</b>
                         </p>
                     </div>
                     """, unsafe_allow_html=True)
@@ -603,7 +606,7 @@ with col_right:
                         <li>Click <b>"Extract Text"</b> to read what's on screen</li>
                         <li>Return to this tab while looking frustrated</li>
                     </ol>
-                    <p><b>Debug Info:</b> Session text length = {len(debug_text)} chars | Has enough text = {debug_has_text}</p>
+                    <p><b>Debug:</b> Session text length = {len(debug_text)} chars</p>
                 </div>
                 """, unsafe_allow_html=True)
             
@@ -670,7 +673,7 @@ with col_right:
                     <li>🎬 Watch your face while you study</li>
                     <li>😊 When I see frustration, I'll simplify things for you</li>
                     <li>📄 I'll read text from your screen</li>
-                    <li>✨ I'll break hard topics into easy bullet points</li>
+                    <li>✨ I'll use AI to break academic texts into easy bullet points</li>
                     <li>📺 I'll find helpful videos for you</li>
                 </ul>
             </div>
@@ -712,7 +715,7 @@ st.sidebar.markdown("**Supervisor:** AP Dr. Ibrahim Venkat")
 st.sidebar.markdown("**Research Date:** " + datetime.now().strftime("%Y-%m-%d"))
 st.sidebar.divider()
 
-with st.sidebar.expander("⚙️ Advanced Settings"):
+with st.sidebar.expander("⚙��� Advanced Settings"):
     st.markdown("**Supported Subjects:**")
     st.markdown("""
     ✅ IGCSE Math (Algebra, Geometry, Trigonometry, Calculus, Statistics)
@@ -720,6 +723,12 @@ with st.sidebar.expander("⚙️ Advanced Settings"):
     ✅ IGCSE English (Grammar, Literature, Essay, Comprehension)
     ✅ Bahasa Melayu (Tata Bahasa, Sastra, Penulisan)
     """)
+    
+    st.markdown("**AI Simplification:**")
+    if HAS_TRANSFORMERS:
+        st.success("✅ Transformer model loaded (Facebook BART)")
+    else:
+        st.warning("⚠️ Using fallback pattern-based simplification")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -747,6 +756,10 @@ st.sidebar.markdown("""
     ✅ YouTube Integration: Ready<br>
     ✅ Session State Sync: Fixed<br>
     <br>
-    <i>Version 3.3 | Built with ❤️ for Inclusive Education</i>
+    <b>Integration:</b><br>
+    🔗 Academic Text Simplification<br>
+    📚 @DaniyalAhmedKhan1234<br>
+    <br>
+    <i>Version 4.0 | Built with ❤️ for Inclusive Education</i>
 </div>
 """, unsafe_allow_html=True)
