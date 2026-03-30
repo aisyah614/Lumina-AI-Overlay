@@ -769,8 +769,5 @@ st.sidebar.markdown("""
     ✅ AI Simplification: Ready<br>
     ✅ YouTube Links: Ready<br>
     ✅ Scaffolding: Enabled<br>
-    <br>
-    🔗 Integration: @DaniyalAhmedKhan1234<br>
-    <i>Version 4.5 | Lumina AI</i>
 </div>
 """, unsafe_allow_html=True)
