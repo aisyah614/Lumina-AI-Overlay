@@ -726,7 +726,6 @@ with col_right:
 st.sidebar.title("🎛️ Lumina Control Panel")
 st.sidebar.markdown("**Student:** Puteri Aisyah Sofia")
 st.sidebar.markdown("**Supervisor:** AP Dr. Ibrahim Venkat")
-st.sidebar.markdown("**Research Date:** " + datetime.now().strftime("%Y-%m-%d"))
 st.sidebar.divider()
 
 with st.sidebar.expander("⚙️ Advanced Settings"):
