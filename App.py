@@ -724,8 +724,8 @@ with col_right:
 
 # ====== SIDEBAR ======
 st.sidebar.title("🎛️ Lumina Control Panel")
-st.sidebar.markdown("**Student:** Puteri Aisyah Sofia")
-st.sidebar.markdown("**Supervisor:** AP Dr. Ibrahim Venkat")
+st.sidebar.markdown("**Student:** Puteri Aisyah Sofia Binti Muzaisham")
+st.sidebar.markdown("**Supervisor:** AP Dr. Ibrahim Venkat Krishnamurthy")
 st.sidebar.divider()
 
 with st.sidebar.expander("⚙️ Advanced Settings"):
